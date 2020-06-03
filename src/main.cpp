@@ -1,36 +1,69 @@
 #include <Arduino.h>
-#include <Esp32WifiManager.h>
+#include <WiFi.h>
+#include <ESPmDNS.h>
+#include <ESPAsyncWebServer.h>
+#include "SPIFFS.h"
 
 
-uint8_t rel1 = 32;
-uint8_t rel2 = 33;
-uint8_t user_butt = 34;
+const char* ssid = "WLAN HOUSE";
+const char* password =  "wioed9dxjsndcio38i3ndcklw";
 
-WifiManager manager;
+AsyncWebServer server(80);
 
 
-void setup() {
-  // put your setup code here, to run once:
 
-  manager.setupScan();
+void setup()
+{
+	//inti serial console
+	Serial.begin(115200);
+
+
+	//mounting filesystem
+	if(!SPIFFS.begin())
+	{
+        Serial.println("An Error has occurred while mounting SPIFFS");
+        return;
+  	}
+ 
+
+	//starting wifi and attempt do connect to network
+	WiFi.begin(ssid, password);
+
+	//wait for connection esablished
+	while (WiFi.status() != WL_CONNECTED)
+	{
+  		delay(500);
+  		Serial.println("Connecting to WiFi..");
+	}
+
+	//connection established
+	Serial.println("Connected to the WiFi network");
+
+	//starting mDNS service
+	if(!MDNS.begin("pumpe"))
+	{
+     	Serial.println("Error starting mDNS");
+     	return;
+  	}
   
+	//printing device's IP
+  	Serial.println(WiFi.localIP());
+  
+	//invoke index.html for website request
+  	server.on("/html", HTTP_GET, [](AsyncWebServerRequest *request)
+	{
+    	request->send(SPIFFS, "/index.html", "text/html");
+	});
+  
+	//start server
+  	server.begin();
 }
+
+
 
 void loop()
 {
+	Serial.println("idle");
 
-  manager.loop();
-	if (manager.getState() == Connected)
-  {
-		// use the Wifi Stack now connected
-	}
-
-  //digitalWrite(rel1, 1);
-  //digitalWrite(rel2, 1);
-
-  //delay(1000);
-
-
-
-  // put your main code here, to run repeatedly:
+	delay(5000);
 }
