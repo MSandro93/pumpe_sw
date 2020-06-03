@@ -1,10 +1,35 @@
 <!DOCTYPE html>
-<html>
+<html lang="de">
   <head>
-    <meta charset="UTF-8">
-    <title>title</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>Static Template</title>
   </head>
   <body>
-  hello
+    <form>
+      <fieldset>
+        <legend>Pumpensteuerung</legend>
+  
+        <button name="pumpON" type="button">Pumpe an</button>
+        <button name="pumpOFF" type="button">Pumpe aus</button>
+      </fieldset>
+    </form>
+    <script>
+
+      const form = document.querySelector("form");
+
+      form.querySelector('button[name="pumpON"]').addEventListener("click", event => {
+        event.preventDefault();
+
+        location.href = "pumpON"
+      });
+
+      form.querySelector('button[name="pumpOFF"]').addEventListener("click", event => {
+        event.preventDefault();
+
+        location.href = "pumpOFF"
+      });
+    </script>
   </body>
 </html>

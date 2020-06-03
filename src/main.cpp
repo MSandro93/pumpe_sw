@@ -9,13 +9,25 @@
 #include <ESPAsyncWiFiManager.h>
 #include "esp_wifi.h"
 
+//custom
+#include "gpios.h"
+#include "main.h"
+
 AsyncWebServer server(80);
 DNSServer dns;
+
+bool clear_credentials_flag = false;
+
+
+
 
 void setup()
 {
 	//inti serial console
 	Serial.begin(115200);
+
+	//inti GPIOs
+	GPIO_init_custom();
 
 	//WiFiManager
     //Local intialization. Once its business is done, there is no need to keep it around
@@ -55,6 +67,19 @@ void setup()
     	request->send(SPIFFS, "/index.html", "text/html");
 		Serial.println("Sending requested index.html");
 	});
+
+
+	server.on("/pumpON", HTTP_GET, [](AsyncWebServerRequest *request)
+	{
+    	Rel_switch(1, 1);
+	});
+
+	server.on("/pumpOFF", HTTP_GET, [](AsyncWebServerRequest *request)
+	{
+    	Rel_switch(1, 0);
+	});
+
+
   
 	//start server
   	server.begin();
@@ -63,23 +88,45 @@ void setup()
 void loop()
 {
 	Serial.println("idle");
-	delay(5000);
+	delay(1000);
+
+	if(clear_credentials_flag)
+	{
+		clear_wifi_credentials();
+		clear_credentials_flag = false;
+	}
 }
 
 void clear_wifi_credentials()
 {
+	Serial.println(">>>> ENTERED RESET-FUNCTION!!! <<<<");
+
+	Rel_toggle(1);
+	
+
 	//reset saved settings
 	//wifiManager.resetSettings();
 	wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT(); //load the flash-saved configs
 	esp_wifi_init(&cfg); //initiate and allocate wifi resources (does not matter if connection fails)
 	delay(2000); //wait a bit
+
 	if(esp_wifi_restore()!=ESP_OK)
 	{
 		Serial.println("WiFi is not initialized by esp_wifi_init ");
-		}else{
-			Serial.println("WiFi Configurations Cleared!");
-		}
+	}
+	else
+	{
+		Serial.println("WiFi Configurations Cleared!");
+	}
+
 		//continue
 	delay(1000);
-	esp_restart(); //just my reset configs routine...
+
+	ESP.restart();
+	
+}
+
+void set_clear_credetial_flag()
+{
+	clear_credentials_flag = true;
 }
