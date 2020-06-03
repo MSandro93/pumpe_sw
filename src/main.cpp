@@ -69,12 +69,12 @@ void setup()
 	});
 
 
-	server.on("/pumpON", HTTP_GET, [](AsyncWebServerRequest *request)
+	server.on("pumpON", HTTP_POST, [](AsyncWebServerRequest *request)
 	{
     	Rel_switch(1, 1);
 	});
 
-	server.on("/pumpOFF", HTTP_GET, [](AsyncWebServerRequest *request)
+	server.on("pumpOFF", HTTP_POST, [](AsyncWebServerRequest *request)
 	{
     	Rel_switch(1, 0);
 	});
