@@ -8,6 +8,7 @@
 #include <ESPAsyncWebServer.h>
 #include <ESPAsyncWiFiManager.h>
 #include "esp_wifi.h"
+#include "time.h"
 
 //custom
 #include "gpios.h"
@@ -18,6 +19,22 @@ DNSServer dns;
 
 bool clear_credentials_flag = false;
 
+
+const char* ntpServer = "pool.ntp.org";
+const long  gmtOffset_sec = 3600;
+const int   daylightOffset_sec = 3600;
+
+
+
+void printLocalTime()
+{
+  struct tm timeinfo;
+  if(!getLocalTime(&timeinfo)){
+    Serial.println("Failed to obtain time");
+    return;
+  }
+  Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S");
+}
 
 
 void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total)
@@ -46,6 +63,7 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 
 void setup()
 {
+	
 	//inti serial console
 	Serial.begin(115200);
 
@@ -67,6 +85,7 @@ void setup()
 	//if you get here you have connected to the WiFi
     Serial.println("connected...yeey :)");
 
+
 	//mounting filesystem
 	if(!SPIFFS.begin())
 	{
@@ -83,6 +102,13 @@ void setup()
   
 	//printing device's IP
   	Serial.println(WiFi.localIP());
+
+
+	//NTP
+	configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
+
+  	printLocalTime();
+
   
 	//invoke index.html for website request
   	server.on("/html", HTTP_GET, [](AsyncWebServerRequest *request)
@@ -93,7 +119,6 @@ void setup()
 
 	server.onRequestBody(handleRequest);
 
-
   
 	//start server
   	server.begin();
@@ -101,19 +126,20 @@ void setup()
 
 void loop()
 {
-
 	if(clear_credentials_flag)
 	{
 		clear_wifi_credentials();
 		clear_credentials_flag = false;
 	}
+
 }
+
+
+
+
 
 void clear_wifi_credentials()
 {
-	Serial.println(">>>> ENTERED RESET-FUNCTION!!! <<<<");
-	
-
 	//reset saved settings
 	//wifiManager.resetSettings();
 	wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT(); //load the flash-saved configs
