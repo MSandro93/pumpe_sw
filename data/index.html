@@ -21,13 +21,13 @@
       form.querySelector('button[name="pumpON"]').addEventListener("click", event => {
         event.preventDefault();
 
-        location.href = "pumpON"
+        fetch("http://pumpe/html", { method: 'POST', body: JSON.stringify("pump_on") })
       });
 
       form.querySelector('button[name="pumpOFF"]').addEventListener("click", event => {
         event.preventDefault();
 
-        location.href = "pumpOFF"
+        fetch("http://pumpe/html", { method: 'POST', body: JSON.stringify("pump_off") })
       });
     </script>
   </body>

@@ -20,6 +20,29 @@ bool clear_credentials_flag = false;
 
 
 
+void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total)
+{
+	if(strcmp((char*)data, "\"pump_on\"") == 0)
+	{
+		request->send(202);
+
+		Serial.println("switching on relais 1");
+		Rel_switch(1, 1);
+	}
+
+	else if(strcmp((char*)data, "\"pump_off\"") == 0)
+	{
+		request->send(202);
+
+		Serial.println("switching off relais 1");
+		Rel_switch(1, 0);
+	}
+
+	else
+	{
+		request->send(400);
+	}
+}
 
 void setup()
 {
@@ -68,16 +91,7 @@ void setup()
 		Serial.println("Sending requested index.html");
 	});
 
-
-	server.on("pumpON", HTTP_POST, [](AsyncWebServerRequest *request)
-	{
-    	Rel_switch(1, 1);
-	});
-
-	server.on("pumpOFF", HTTP_POST, [](AsyncWebServerRequest *request)
-	{
-    	Rel_switch(1, 0);
-	});
+	server.onRequestBody(handleRequest);
 
 
   
@@ -87,8 +101,6 @@ void setup()
 
 void loop()
 {
-	Serial.println("idle");
-	delay(1000);
 
 	if(clear_credentials_flag)
 	{
@@ -100,8 +112,6 @@ void loop()
 void clear_wifi_credentials()
 {
 	Serial.println(">>>> ENTERED RESET-FUNCTION!!! <<<<");
-
-	Rel_toggle(1);
 	
 
 	//reset saved settings
