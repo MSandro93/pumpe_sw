@@ -29,7 +29,8 @@ const int   daylightOffset_sec = 3600;
 void printLocalTime()
 {
   struct tm timeinfo;
-  if(!getLocalTime(&timeinfo)){
+  if(!getLocalTime(&timeinfo))
+  {
     Serial.println("Failed to obtain time");
     return;
   }
@@ -39,9 +40,12 @@ void printLocalTime()
 
 void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total)
 {
+	Serial.printf("Got request: |%s|\n", data);
+
+
 	if(strcmp((char*)data, "\"pump_on\"") == 0)
 	{
-		request->send(202);
+		request->send(200);
 
 		Serial.println("switching on relais 1");
 		Rel_switch(1, 1);
@@ -49,16 +53,35 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 
 	else if(strcmp((char*)data, "\"pump_off\"") == 0)
 	{
-		request->send(202);
+		request->send(200);
 
 		Serial.println("switching off relais 1");
 		Rel_switch(1, 0);
 	}
 
-	else
+	else //if(strcmp((char*)data, "\"GetServerTime\"") == 0)
 	{
-		request->send(400);
+		char buff[17] = {0};
+
+		Serial.println(">>> Server time requested!");
+
+		struct tm timeinfo;
+
+		if(!getLocalTime(&timeinfo))
+  		{
+    		request->send(500);
+    		return;
+ 		}
+
+  		sprintf(buff, "%d.%d.%d %d:%d:%d", timeinfo.tm_mday, timeinfo.tm_mon, (timeinfo.tm_year + 1900), timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec);
+
+		request->send(200, "text/plain", buff);
 	}
+
+//	else
+//	{
+//		request->send(400);
+//	}
 }
 
 void setup()

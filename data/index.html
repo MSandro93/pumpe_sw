@@ -8,13 +8,25 @@
   </head>
   <body>
     <form>
+
       <fieldset>
         <legend>Pumpensteuerung</legend>
   
         <button name="pumpON" type="button">Pumpe an</button>
         <button name="pumpOFF" type="button">Pumpe aus</button>
       </fieldset>
+
+      <fieldset>
+        <legend>Systemuhr</legend>
+  
+        <button name="anfragen" type="button">anfragen</button>
+        <pre> </pre>
+      </fieldset>
+      
     </form>
+
+ 
+
     <script>
       const form = document.querySelector("form");
 
@@ -29,6 +41,29 @@
 
         fetch("http://pumpe/html", { method: 'POST', body: JSON.stringify("pump_off") })
       });
+
+
+
+      form.querySelector('button[name="anfragen"]').addEventListener('click', async event =>
+      {
+        const response = await getData('GetServerTime');
+        pre = response;
+
+        console.log("got: " + response )
+      });
+
+
+
+
+      async function getData(req)
+      {
+        console.log("called 'getData()' with: " + req);
+
+        const response = await fetch("http://pumpe/html", { method: 'POST', body: JSON.stringify(req) });
+        const text = await response.text();
+        return text;
+      }
+
     </script>
   </body>
 </html>
