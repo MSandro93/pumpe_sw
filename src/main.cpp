@@ -15,13 +15,27 @@
 #include "gpios.h"
 #include "main.h"
 
+
+
+
+//memory-areas
+#define ntp_add 	0
+#define mstart_add 	100
+#define mstop_add 	110
+#define astart_add 	120
+#define astop_add 	130
+//
+
+
+
+
 AsyncWebServer server(80);
 DNSServer dns;
 
 bool clear_credentials_flag = false;
 
 
-char ntpServer[100] = "pool.ntp.org";
+char ntpServer[101] = "pool.ntp.org";
 const long  gmtOffset_sec = 3600;
 const int   daylightOffset_sec = 3600;
 
@@ -38,6 +52,17 @@ timestamp abends_start;
 timestamp abends_stop;
 //
 
+
+bool onlyACSII(char* str_, int len_)
+{
+	for(int i=0; i<len_; i++)
+	{
+		if(str_[i]<32 || str_[i]>216)
+			return false;
+	}
+
+	return true;
+}
 
 void printLocalTime()
 {
@@ -180,6 +205,14 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 		//
 
 		strcpy(ntpServer, elements[1]);
+
+		//write NTP server address to EEPROM
+		EEPROM.begin(140);
+		EEPROM.writeBytes(ntp_add, ntpServer, strlen(ntpServer));
+		EEPROM.writeByte( (ntp_add + strlen(ntpServer)), 0);  //termiante string by 0
+		EEPROM.end();
+		//
+
 		Serial.printf("New NTP-server adress was set to '%s'\n", ntpServer );
 
 		//get time from NTP 
@@ -237,13 +270,26 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 		    (getMinutesFromStr(elements[3]) > getMinutesFromStr(elements[2])) &&
 			(getMinutesFromStr(elements[4]) > getMinutesFromStr(elements[3])) )
 		{
+			Serial.println("New schedule was set.");
+			request->send(200);
+
 			setTimestamp(&morgens_start, elements[1]);
 			setTimestamp(&morgens_stop,  elements[2]);
 			setTimestamp(&abends_start,  elements[3]);
 			setTimestamp(&abends_stop,   elements[4]);
 
-			Serial.println("New schedule was set.");
-			request->send(200);
+			//store timestamps to EEPROM
+			EEPROM.begin(140);
+
+			EEPROM.writeBytes(mstart_add, &morgens_start, sizeof(timestamp));
+			EEPROM.writeBytes(mstop_add, &morgens_stop, sizeof(timestamp));
+			EEPROM.writeBytes(astart_add, &abends_start, sizeof(timestamp));
+			EEPROM.writeBytes(astop_add, &abends_stop, sizeof(timestamp));
+
+			EEPROM.end();
+			//
+
+			
 		}
 
 		else
@@ -267,19 +313,76 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 	free(body);
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 void setup()
 {
 	//inti serial console
 	Serial.begin(115200);
 
 
+	////EEPROM
+	char buff[100];
+	EEPROM.begin(140);
+
+	//load ntp server address
+	EEPROM.readBytes(ntp_add, buff, 100);
+
+
+	Serial.print("\n");
+	for(int i=0; i<100; i++)
+		Serial.printf("%d(%c), ", buff[i], buff[i]);
+	Serial.print("\n");
+
+
+	if(onlyACSII(buff, strlen(buff)))
+	{
+		sprintf(ntpServer, "%s", buff);
+		Serial.println("loaded ntp server address from EEPROM.");
+	}
+
+	
+	//
+
+	//load schedule
+	EEPROM.readBytes(mstart_add, &morgens_start, sizeof(timestamp));
+	Serial.println("loaded 'morgens_start' from EEPROM.");
+
+	EEPROM.readBytes(mstop_add, &morgens_stop, sizeof(timestamp));
+	Serial.println("loaded 'morgens_stop' from EEPROM.");
+
+	EEPROM.readBytes(astart_add, &abends_start, sizeof(timestamp));
+	Serial.println("loaded 'abends_start' from EEPROM.");
+
+	EEPROM.readBytes(astop_add, &abends_stop, sizeof(timestamp));
+	Serial.println("loaded 'abends_stop' from EEPROM.");
+	//
+
+
+	EEPROM.end();
+	////
 
 	//inti GPIOs
 	GPIO_init_custom();
+	Serial.println("GPIOs initilized.");
 
 	//WiFiManager
     //Local intialization. Once its business is done, there is no need to keep it around
     AsyncWiFiManager wifiManager(&server,&dns);
+	Serial.println("Webserver initilized.");
     
     //fetches ssid and pass from eeprom and tries to connect
     //if it does not connect it starts an access point with the specified name
@@ -299,33 +402,35 @@ void setup()
         Serial.println("An Error has occurred while mounting SPIFFS");
         return;
   	}
- 
+	else
+	{
+		Serial.println("Filesystem mounted.");
+	}
+	//
+
 	//starting mDNS service
 	if(!MDNS.begin("pumpe"))
 	{
      	Serial.println("Error starting mDNS");
      	return;
   	}
+	else
+	{
+		Serial.println("mDNS service started.");
+	}
+	//
   
 	//printing device's IP
   	Serial.println(WiFi.localIP());
-
+	//
 
 	//NTP
-	configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
-  	printLocalTime();
-
-	
-	//set schedule
-	morgens_start.stunden = 8;
-	morgens_start.minuten = 0;
-	morgens_stop.stunden = 8;
-	morgens_stop.minuten = 30;
-
-	abends_start.stunden = 19;
-	abends_start.minuten = 15;
-	abends_stop.stunden = 20;
-	abends_stop.minuten = 15;
+	if(onlyACSII(ntpServer, strlen(ntpServer)))
+	{
+		Serial.printf("Trying to connect to NTP server '%s'\n", ntpServer);
+		configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
+  		printLocalTime();
+	}
 	//
 
   

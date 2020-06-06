@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta http-equiv="X-UA-Compatible" content="ie=edge" />
-    <title>Static Template</title>
+    <title>Gartenbewässerung - Pumpe</title>
   </head>
   <body>
     <form>
@@ -69,7 +69,7 @@
 
       form.querySelector('button[name="SetNTP"]').addEventListener('click', async event =>
       {
-        var inputText = form.querySelector('input[name="nptServer"]').value;
+        const inputText = form.querySelector('input[name="nptServer"]').value;
 
         const response = await getData('SetNTP;' + inputText);
 
@@ -89,7 +89,7 @@
             (getTsFromStr(t3_text) > getTsFromStr(t2_text)) &&
             (getTsFromStr(t4_text) > getTsFromStr(t3_text)) )
         {
-          const inputText = [t1,  t2, t3, t4].join(';');
+          const inputText = [t1_text,  t2_text, t3_text, t4_text].join(';');
           const response = await getData('setSchedule;' + inputText);
         }
 
@@ -121,10 +121,10 @@
         /*get server time*/
         const response_time = await getData('GetServerTime');
 
-        const resps_time = response.split(';');
+        const resps_time = response_time.split(';');
 
-        form.querySelector('span[name="serverTime"]').innerHTML = resps[0];
-        form.querySelector('input[name="nptServer"]').value = resps[1];
+        form.querySelector('span[name="serverTime"]').innerHTML = resps_time[0];
+        form.querySelector('input[name="nptServer"]').value = resps_time[1];
         /**/
 
         
@@ -133,10 +133,10 @@
 
         const resps_sched = response_sched.split(';');
 
-        form.querySelector('input[name="t1_inp"]').value = resps[0];
-        form.querySelector('input[name="t2_inp"]').value = resps[1];
-        form.querySelector('input[name="t3_inp"]').value = resps[2];
-        form.querySelector('input[name="t4_inp"]').value = resps[3];
+        form.querySelector('input[name="t1_inp"]').value = resps_sched[0];
+        form.querySelector('input[name="t2_inp"]').value = resps_sched[1];
+        form.querySelector('input[name="t3_inp"]').value = resps_sched[2];
+        form.querySelector('input[name="t4_inp"]').value = resps_sched[3];
         /**/
       }
 
