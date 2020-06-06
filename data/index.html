@@ -20,7 +20,9 @@
         <legend>Systemuhr</legend>
   
         <button name="anfragen" type="button">anfragen</button>
-        <span name="serverTime"></span>
+        <span   name="serverTime"></span>
+        <label>NTP-Server: </label> <input type="text" name="nptServer">
+        <button name="SetNTP" type="button">NTP-Server neu setzen</button>
       </fieldset>
       
     </form>
@@ -47,9 +49,20 @@
       form.querySelector('button[name="anfragen"]').addEventListener('click', async event =>
       {
         const response = await getData('GetServerTime');
-        form.querySelector('span[name="serverTime"]').innerHTML = response;
 
-        console.log("got: " + response )
+        var resps = response.split(';');
+
+        form.querySelector('span[name="serverTime"]').innerHTML = resps[0];
+        form.querySelector('input[name="nptServer"]').value = resps[1];
+      });
+
+      form.querySelector('button[name="SetNTP"]').addEventListener('click', async event =>
+      {
+        var inputText = form.querySelector('input[name="nptServer"]').value;
+
+        const response = await getData('SetNTP;' + inputText);
+
+        form.querySelector('input[name="nptServer"]').value = response;
       });
 
 

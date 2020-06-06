@@ -20,7 +20,7 @@ DNSServer dns;
 bool clear_credentials_flag = false;
 
 
-const char* ntpServer = "pool.ntp.org";
+char* ntpServer = "pool.ntp.org";
 const long  gmtOffset_sec = 3600;
 const int   daylightOffset_sec = 3600;
 
@@ -41,15 +41,38 @@ void printLocalTime()
 void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total)
 {
 	char* body = (char*)malloc(100);
-	for(int i=0; i<100; i++)
-		body[0] = '\0';
+	char* elemts[10];
+	int elemts_cnt = 0;
 
 	//cut requeset-body out of data
-	strncpy(body, (char*)data, len);
-	body[len] = '\0';
+	strncpy(body, (char*)(data+1), len-2);  //removes quotation marks around the body as well. I know... nasty...
+	body[len-2] = '\0';		//terminates te string propper
 	//
 
-	if(strcmp((char*)data, "\"pump_on\"") == 0)
+
+
+	//split request-body in it's elemts
+	elemts[elemts_cnt] = strtok(body, ";");
+	while(elemts[elemts_cnt] != NULL)
+	{
+		elemts[++elemts_cnt] = strtok(NULL, ";");
+	}
+	//
+
+
+
+	Serial.printf("found %d elemts in response\n", elemts_cnt);
+
+	//if there was no elemt in the body, terminate
+	if(elemts_cnt<1)
+	{
+		request->send(400);
+		Serial.println("No element was found in the request-body");
+		return;
+	}
+	//
+
+	if(strcmp(elemts[0], "pump_on") == 0)
 	{
 		request->send(200);
 
@@ -57,7 +80,7 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 		Rel_switch(1, 1);
 	}
 
-	else if(strcmp(body, "\"pump_off\"") == 0)
+	else if(strcmp(elemts[0], "pump_off") == 0)
 	{
 		request->send(200);
 
@@ -65,11 +88,11 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 		Rel_switch(1, 0);
 	}
 
-	else if(strcmp(body, "\"GetServerTime\"") == 0)
+	else if(strcmp(elemts[0], "GetServerTime") == 0)
 	{
-		char buff[21] = {0};
+		char buff[100] = {0};
 
-		Serial.println(">>> Server time requested!");
+		Serial.println("Server time was requested");
 
 		struct tm timeinfo;
 
@@ -80,13 +103,46 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
  		}
 
 
-  		sprintf(buff, "%02d:%02d:%02d  %02d.%02d.%04d", timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec, timeinfo.tm_mday, timeinfo.tm_mon, (timeinfo.tm_year + 1900));
+  		sprintf(buff, "%02d:%02d:%02d  %02d.%02d.%04d;%s", timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec, timeinfo.tm_mday, timeinfo.tm_mon, (timeinfo.tm_year + 1900), ntpServer);
 
 		request->send(200, "text/plain", buff); 
 	}
 
+
+	else if(strcmp(elemts[0], "SetNTP") == 0)
+	{
+		//if no new ntp server adress was send, termiante
+		if(elemts_cnt<2)
+		{
+			request->send(401);
+			return;
+		}
+		//
+
+		ntpServer = elemts[1];
+		Serial.printf("New NTP-server adress was set to '%s'\n", ntpServer );
+
+		//get time from NTP 
+		configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
+
+
+		struct tm timeinfo;
+		if(!getLocalTime(&timeinfo))	//try to get time from new ntp-server adress
+  		{
+    		Serial.println("Failed to obtain time");
+			request->send(402);
+    		return;
+  		}
+		//
+
+		//loop back new ntp-server adress
+		request->send(200, "text/plain", ntpServer); 
+		//
+	}
+
 	else
 	{
+		Serial.println("Invalid request");
 		request->send(400);
 	}
 
