@@ -67,7 +67,7 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 
 	else if(strcmp(body, "\"GetServerTime\"") == 0)
 	{
-		char buff[17] = {0};
+		char buff[21] = {0};
 
 		Serial.println(">>> Server time requested!");
 
@@ -80,7 +80,7 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
  		}
 
 
-  		sprintf(buff, " %02d:%02d:%02d  %02d.%02d.%04d", timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec, timeinfo.tm_mday, timeinfo.tm_mon, (timeinfo.tm_year + 1900));
+  		sprintf(buff, "%02d:%02d:%02d  %02d.%02d.%04d", timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec, timeinfo.tm_mday, timeinfo.tm_mon, (timeinfo.tm_year + 1900));
 
 		request->send(200, "text/plain", buff); 
 	}
