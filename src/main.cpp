@@ -40,8 +40,14 @@ void printLocalTime()
 
 void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total)
 {
-	Serial.printf("Got request: |%s|\n", data);
+	char* body = (char*)malloc(100);
+	for(int i=0; i<100; i++)
+		body[0] = '\0';
 
+	//cut requeset-body out of data
+	strncpy(body, (char*)data, len);
+	body[len] = '\0';
+	//
 
 	if(strcmp((char*)data, "\"pump_on\"") == 0)
 	{
@@ -51,7 +57,7 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 		Rel_switch(1, 1);
 	}
 
-	else if(strcmp((char*)data, "\"pump_off\"") == 0)
+	else if(strcmp(body, "\"pump_off\"") == 0)
 	{
 		request->send(200);
 
@@ -59,7 +65,7 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 		Rel_switch(1, 0);
 	}
 
-	else //if(strcmp((char*)data, "\"GetServerTime\"") == 0)
+	else if(strcmp(body, "\"GetServerTime\"") == 0)
 	{
 		char buff[17] = {0};
 
@@ -73,15 +79,19 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
     		return;
  		}
 
-  		sprintf(buff, "%d.%d.%d %d:%d:%d", timeinfo.tm_mday, timeinfo.tm_mon, (timeinfo.tm_year + 1900), timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec);
+
+  		sprintf(buff, " %02d:%02d:%02d  %02d.%02d.%04d", timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec, timeinfo.tm_mday, timeinfo.tm_mon, (timeinfo.tm_year + 1900));
 
 		request->send(200, "text/plain", buff);
 	}
 
-//	else
-//	{
-//		request->send(400);
-//	}
+	else
+	{
+		request->send(400);
+	}
+
+
+	free(body);
 }
 
 void setup()
