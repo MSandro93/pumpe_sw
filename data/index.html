@@ -19,10 +19,29 @@
       <fieldset>
         <legend>Systemuhr</legend>
   
-        <button name="anfragen" type="button">anfragen</button>
-        <span   name="serverTime"></span>
-        <label>NTP-Server: </label> <input type="text" name="nptServer">
-        <button name="SetNTP" type="button">NTP-Server neu setzen</button>
+        <span   name="lable1">Server-Zeit: </span>
+        <span   name="serverTime">??.??.??  ??.??.????</span>
+
+        <p>
+          <label>NTP-Server: </label> <input type="text" name="nptServer">
+          <button name="SetNTP" type="button">NTP-Server neu setzen</button>
+        </p>
+      </fieldset>
+
+
+      <fieldset>
+        <legend>Gießplan</legend>
+
+        <label>Morgens von: </label> <input type="text" name="t1_inp">
+        <label>bis: </label> <input type="text" name="t2_inp">
+        <p>
+          <label>Abends von: </label> <input type="text" name="t3_inp">
+        <label>bis: </label> <input type="text" name="t4_inp">
+        </p>
+        <p>
+          <button name="setSchedule" type="button">Gießzeiten festlegen</button>
+        </p>
+
       </fieldset>
       
     </form>
@@ -30,6 +49,9 @@
  
 
     <script>
+
+      document.addEventListener('DOMContentLoaded', getInitalData);
+
       const form = document.querySelector("form");
 
       form.querySelector('button[name="pumpON"]').addEventListener("click", event => {
@@ -45,17 +67,6 @@
       });
 
 
-
-      form.querySelector('button[name="anfragen"]').addEventListener('click', async event =>
-      {
-        const response = await getData('GetServerTime');
-
-        var resps = response.split(';');
-
-        form.querySelector('span[name="serverTime"]').innerHTML = resps[0];
-        form.querySelector('input[name="nptServer"]').value = resps[1];
-      });
-
       form.querySelector('button[name="SetNTP"]').addEventListener('click', async event =>
       {
         var inputText = form.querySelector('input[name="nptServer"]').value;
@@ -66,15 +77,67 @@
       });
 
 
+      form.querySelector('button[name="setSchedule"]').addEventListener('click', async event =>
+      {
+        const t1_text = form.querySelector('input[name="t1_inp"]').value;
+        const t2_text = form.querySelector('input[name="t2_inp"]').value;
+        const t3_text = form.querySelector('input[name="t3_inp"]').value;
+        const t4_text = form.querySelector('input[name="t4_inp"]').value;
 
+        
+        if( (getTsFromStr(t2_text) > getTsFromStr(t1_text)) &&
+            (getTsFromStr(t3_text) > getTsFromStr(t2_text)) &&
+            (getTsFromStr(t4_text) > getTsFromStr(t3_text)) )
+        {
+          const inputText = [t1,  t2, t3, t4].join(';');
+          const response = await getData('setSchedule;' + inputText);
+        }
+
+        else
+        {
+          alert("Zeitpunkte passen nicht zusammen! (z.B. ein 'bis' liegt zeitlich vor einem 'von')");
+        }
+        
+      });
+
+
+
+      function getTsFromStr(ts_)
+      {
+        const arr = ts_.split(":");
+
+        return parseInt(arr[0])*60 + parseInt(arr[1])
+      }
 
       async function getData(req)
       {
-        console.log("called 'getData()' with: " + req);
-
         const response = await fetch("http://pumpe/html", { method: 'POST', body: JSON.stringify(req) });
         const text = await response.text();
         return text;
+      }
+
+      async function getInitalData()
+      {
+        /*get server time*/
+        const response_time = await getData('GetServerTime');
+
+        const resps_time = response.split(';');
+
+        form.querySelector('span[name="serverTime"]').innerHTML = resps[0];
+        form.querySelector('input[name="nptServer"]').value = resps[1];
+        /**/
+
+        
+        /*get current time schedule*/
+        const response_sched = await getData('getSchedule');
+
+        const resps_sched = response_sched.split(';');
+
+        form.querySelector('input[name="t1_inp"]').value = resps[0];
+        form.querySelector('input[name="t2_inp"]').value = resps[1];
+        form.querySelector('input[name="t3_inp"]').value = resps[2];
+        form.querySelector('input[name="t4_inp"]').value = resps[3];
+        /**/
       }
 
     </script>

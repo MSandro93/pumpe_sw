@@ -3,6 +3,7 @@
 #include <ESPmDNS.h>
 #include <ESPAsyncWebServer.h>
 #include "SPIFFS.h"
+#include <EEPROM.h>
 
 //needed for library
 #include <ESPAsyncWebServer.h>
@@ -24,6 +25,18 @@ char ntpServer[100] = "pool.ntp.org";
 const long  gmtOffset_sec = 3600;
 const int   daylightOffset_sec = 3600;
 
+//schedule
+typedef struct timestamp
+{
+	uint8_t stunden = 0;
+	uint8_t minuten = 0;
+};
+
+timestamp morgens_start;
+timestamp morgens_stop;
+timestamp abends_start;
+timestamp abends_stop;
+//
 
 
 void printLocalTime()
@@ -37,12 +50,52 @@ void printLocalTime()
   Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S");
 }
 
+void setTimestamp(timestamp* ts_, char* str_)
+{
+	char* parts[4];
+	int cnt = 0;
+
+	parts[cnt] = strtok(str_, ":");
+	while(parts[cnt] != NULL)
+	{
+		parts[++cnt] = strtok(NULL, ":");
+	}
+
+	ts_->stunden = 	atoi(parts[0]);
+	ts_->minuten = 	atoi(parts[1]);
+
+}
+
+int getMinutesFromStr(char* str_)
+{
+	char buff[20];
+
+	strcpy(buff, str_);
+	buff[strlen(str_)] = 0;
+
+	char* parts[4];
+	int cnt = 0;
+
+	parts[cnt] = strtok(buff, ":");
+	while(parts[cnt] != NULL)
+	{
+		parts[++cnt] = strtok(NULL, ":");
+	}
+
+	if(cnt != 2)
+		return -1;
+		
+	else
+		return atoi(parts[0])*60 +  atoi(parts[1]);
+}
+
+
 
 void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total)
 {
 	char* body = (char*)malloc(100);
-	char* elemts[10];
-	int elemts_cnt = 0;
+	char* elements[10];
+	int elements_cnt = 0;
 
 	//cut requeset-body out of data
 	strncpy(body, (char*)(data+1), len-2);  //removes quotation marks around the body as well. I know... nasty...
@@ -51,20 +104,26 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 
 
 
-	//split request-body in it's elemts
-	elemts[elemts_cnt] = strtok(body, ";");
-	while(elemts[elemts_cnt] != NULL)
+	//split request-body in it's elements
+	elements[elements_cnt] = strtok(body, ";");
+	while(elements[elements_cnt] != NULL)
 	{
-		elemts[++elemts_cnt] = strtok(NULL, ";");
+		elements[++elements_cnt] = strtok(NULL, ";");
 	}
 	//
 
 
 
-	Serial.printf("found %d elemts in response\n", elemts_cnt);
+	for(int i=0; i<elements_cnt; i++)
+	{
+		Serial.printf(">> |%s|\n", elements[i]);
+	}
+
+
+	Serial.printf("found %d elements in response\n", elements_cnt);
 
 	//if there was no elemt in the body, terminate
-	if(elemts_cnt<1)
+	if(elements_cnt<1)
 	{
 		request->send(400);
 		Serial.println("No element was found in the request-body");
@@ -72,7 +131,7 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 	}
 	//
 
-	if(strcmp(elemts[0], "pump_on") == 0)
+	if(strcmp(elements[0], "pump_on") == 0)
 	{
 		request->send(200);
 
@@ -80,7 +139,7 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 		Rel_switch(1, 1);
 	}
 
-	else if(strcmp(elemts[0], "pump_off") == 0)
+	else if(strcmp(elements[0], "pump_off") == 0)
 	{
 		request->send(200);
 
@@ -88,7 +147,7 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 		Rel_switch(1, 0);
 	}
 
-	else if(strcmp(elemts[0], "GetServerTime") == 0)
+	else if(strcmp(elements[0], "GetServerTime") == 0)
 	{
 		char buff[100] = {0};
 		for(int i=0; i<100; i++)
@@ -110,17 +169,17 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 	}
 
 
-	else if(strcmp(elemts[0], "SetNTP") == 0)
+	else if(strcmp(elements[0], "SetNTP") == 0)
 	{
 		//if no new ntp server adress was send, termiante
-		if(elemts_cnt<2)
+		if(elements_cnt<2)
 		{
 			request->send(401);
 			return;
 		}
 		//
 
-		strcpy(ntpServer, elemts[1]);
+		strcpy(ntpServer, elements[1]);
 		Serial.printf("New NTP-server adress was set to '%s'\n", ntpServer );
 
 		//get time from NTP 
@@ -137,9 +196,66 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 		//
 
 		//loop back new ntp-server adress
-		request->send(200, "text/plain", ntpServer); 
+		else
+			request->send(200, "text/plain", ntpServer); 
 		//
 	}
+
+	else if(strcmp(elements[0], "getSchedule") == 0)
+	{
+		char response[100] = {0};
+
+
+		sprintf(response, "%02d:%02d;%02d:%02d;%02d:%02d;%02d:%02d",
+				morgens_start.stunden,
+				morgens_start.minuten,
+				morgens_stop.stunden,
+				morgens_stop.minuten,
+
+				abends_start.stunden,
+				abends_start.minuten,
+				abends_stop.stunden,
+				abends_stop.minuten
+				);
+
+		request->send(200, "text/plain", response);
+
+		Serial.printf(">> schedule send: %s\n", response);
+	}
+	
+	else if(strcmp(elements[0], "setSchedule") == 0)
+	{
+		//if no new ntp server adress was send, termiante
+		if(elements_cnt<5)
+		{
+			request->send(401);
+			return;
+		}
+		//
+
+		if( (getMinutesFromStr(elements[2]) > getMinutesFromStr(elements[1])) && 
+		    (getMinutesFromStr(elements[3]) > getMinutesFromStr(elements[2])) &&
+			(getMinutesFromStr(elements[4]) > getMinutesFromStr(elements[3])) )
+		{
+			setTimestamp(&morgens_start, elements[1]);
+			setTimestamp(&morgens_stop,  elements[2]);
+			setTimestamp(&abends_start,  elements[3]);
+			setTimestamp(&abends_stop,   elements[4]);
+
+			Serial.println("New schedule was set.");
+			request->send(200);
+		}
+
+		else
+		{
+			Serial.println("New schedule was invalid.");
+			request->send(400);
+		}
+		
+		
+		
+	}
+	
 
 	else
 	{
@@ -153,9 +269,10 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 
 void setup()
 {
-	
 	//inti serial console
 	Serial.begin(115200);
+
+
 
 	//inti GPIOs
 	GPIO_init_custom();
@@ -196,8 +313,20 @@ void setup()
 
 	//NTP
 	configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
-
   	printLocalTime();
+
+	
+	//set schedule
+	morgens_start.stunden = 8;
+	morgens_start.minuten = 0;
+	morgens_stop.stunden = 8;
+	morgens_stop.minuten = 30;
+
+	abends_start.stunden = 19;
+	abends_start.minuten = 15;
+	abends_stop.stunden = 20;
+	abends_stop.minuten = 15;
+	//
 
   
 	//invoke index.html for website request
