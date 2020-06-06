@@ -20,7 +20,7 @@ DNSServer dns;
 bool clear_credentials_flag = false;
 
 
-char* ntpServer = "pool.ntp.org";
+char ntpServer[100] = "pool.ntp.org";
 const long  gmtOffset_sec = 3600;
 const int   daylightOffset_sec = 3600;
 
@@ -91,6 +91,8 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 	else if(strcmp(elemts[0], "GetServerTime") == 0)
 	{
 		char buff[100] = {0};
+		for(int i=0; i<100; i++)
+			buff[0] = 0;
 
 		Serial.println("Server time was requested");
 
@@ -101,7 +103,6 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
     		request->send(500);
     		return;
  		}
-
 
   		sprintf(buff, "%02d:%02d:%02d  %02d.%02d.%04d;%s", timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec, timeinfo.tm_mday, timeinfo.tm_mon, (timeinfo.tm_year + 1900), ntpServer);
 
@@ -119,7 +120,7 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 		}
 		//
 
-		ntpServer = elemts[1];
+		strcpy(ntpServer, elemts[1]);
 		Serial.printf("New NTP-server adress was set to '%s'\n", ntpServer );
 
 		//get time from NTP 
