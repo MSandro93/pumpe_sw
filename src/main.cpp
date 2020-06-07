@@ -4,6 +4,7 @@
 #include <ESPAsyncWebServer.h>
 #include "SPIFFS.h"
 #include <EEPROM.h>
+#include <HTTPClient.h>
 
 //needed for library
 #include <ESPAsyncWebServer.h>
@@ -20,14 +21,15 @@
 
 
 //memory-areas
-#define max_mem 	190
+#define max_mem 	210
 
-#define ntp_add 	0
-#define mstart_add 	100
-#define mstop_add 	110
-#define astart_add 	120
-#define astop_add 	130
-#define apiKey_add 	140
+#define ntp_add 	0	//100
+#define mstart_add 	100	//10
+#define mstop_add 	110	//10
+#define astart_add 	120	//10
+#define astop_add 	130	//10
+#define apiKey_add 	140	//32
+#define city_add 	180 //20
 //
 
 
@@ -39,7 +41,7 @@ DNSServer dns;
 bool clear_credentials_flag = false;
 
 
-char ntpServer[101] = "pool.ntp.org";
+char ntpServer[101] = "";
 const long  gmtOffset_sec = 3600;
 const int   daylightOffset_sec = 3600;
 
@@ -57,18 +59,51 @@ timestamp abends_start;
 timestamp abends_stop;
 //
 
-
+//everything for the scheuduler
 bool morgen_quiet = false;
 bool abend_quiet = false;
 bool forced_on = false;
 
-
-char api_key[50];
-#define API_KEY_LENGTH 32
-
-
 void check_time(void);
 Ticker time_schedule(check_time, 1000, 0, MILLIS);
+//
+
+//everything for the weather forecaste
+char api_key[50];
+char city[50];
+#define API_KEY_LENGTH 32
+
+HTTPClient http;
+//
+
+
+
+
+
+
+int getTomorrowWeather()
+{
+	char url[100];
+	String resp;
+
+	sprintf(url, "http://api.openweathermap.org/data/2.5/forecast/?q=%s,de&appid=%s", city, api_key);
+	http.begin(url);
+
+	int httpCode = http.GET();
+	if(  httpCode!= 200)
+	{
+		Serial.printf("Failed to fetch weather forecast: %d\n", httpCode);
+		return -1;
+	}
+
+	Serial.println("Got weather forecaste.");
+	
+	resp = http.getString();
+
+	Serial.println(resp);
+
+	return 0;
+}
 
 
 void check_time()
@@ -257,7 +292,7 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 
 	else if(strcmp(elements[0], "GetServerTime") == 0)
 	{
-		char buff[100] = {0};
+		char buff[200] = {0};
 		for(int i=0; i<100; i++)
 			buff[0] = 0;
 
@@ -265,17 +300,18 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 
 		struct tm timeinfo;
 
-		if(!getLocalTime(&timeinfo))
+		if(!getLocalTime(&timeinfo), 1000)
   		{
-    		request->send(500);
-    		return;
- 		}
+			request->send(500);
+			return;
+		}
+		
+		Serial.println("  >> got here! <<");
 
-  		sprintf(buff, "%02d:%02d:%02d  %02d.%02d.%04d;%s", timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec, timeinfo.tm_mday, timeinfo.tm_mon, (timeinfo.tm_year + 1900), ntpServer);
+  		sprintf(buff, "%02d:%02d:%02d  %02d.%02d.%04d;%s;%s;%s;", timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec, timeinfo.tm_mday, timeinfo.tm_mon, (timeinfo.tm_year + 1900), ntpServer, api_key, city);
 
 		request->send(200, "text/plain", buff); 
 	}
-
 
 	else if(strcmp(elements[0], "SetNTP") == 0)
 	{
@@ -313,7 +349,11 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 
 		//loop back new ntp-server adress
 		else
-			request->send(200, "text/plain", ntpServer); 
+		{
+			char buff[100];
+			sprintf(buff, "%s;%02d:%02d:%02d  %02d.%02d.%04d;", ntpServer, timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec, timeinfo.tm_mday, timeinfo.tm_mon, (timeinfo.tm_year + 1900));
+			request->send(200, "text/plain", buff); 
+		}
 		//
 	}
 
@@ -375,7 +415,6 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 			
 		}
 
-
 		else
 		{
 			Serial.println("New schedule was invalid.");
@@ -390,9 +429,7 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 	{
 		ESP.restart();
 		request->send(200);
-	}
-	
-
+	}	
 
 	else if(strcmp(elements[0], "SetAPIKey") == 0)
 	{
@@ -416,6 +453,27 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 
 		request->send(200, "text/plain", api_key); 
 
+	}
+
+	else if(strcmp(elements[0], "SetCity") == 0)
+	{
+		//if no new city was send, termiante
+		if(elements_cnt<2)
+		{
+			request->send(401);
+			return;
+		}
+		//
+
+		sprintf(city, "%s", elements[1]);
+
+		Serial.printf(">> new City: |%s|\n", city);
+
+		EEPROM.begin(max_mem);
+		EEPROM.writeString(city_add, city);
+		EEPROM.end();
+
+		request->send(200, "text/plain", city); 
 	}
 
 	
@@ -459,19 +517,11 @@ void setup()
 	EEPROM.readBytes(ntp_add, buff, 100);
 
 
-	Serial.print("\n");
-	for(int i=0; i<100; i++)
-		Serial.printf("%d(%c), ", buff[i], buff[i]);
-	Serial.print("\n");
-
-
 	if(onlyACSII(buff, strlen(buff)))
 	{
 		sprintf(ntpServer, "%s", buff);
 		Serial.println("loaded ntp server address from EEPROM.");
 	}
-
-	
 	//
 
 	//load schedule
@@ -488,9 +538,15 @@ void setup()
 	Serial.println("loaded 'abends_stop' from EEPROM.");
 	//
 
-	//load API-Key for Openwaethermaps
+	//load API-Key for Openweathermaps
 	EEPROM.readBytes(apiKey_add, api_key,  API_KEY_LENGTH);
-	Serial.println("API Key for waether API laoded.");
+	Serial.println("API Key for waether API loaded.");
+	//
+
+	//load city for Openweathermaps
+	EEPROM.readBytes(city_add, buff, 20);
+	sprintf(city, "%s", buff);
+	Serial.println("City loaded.");
 	//
 
 	EEPROM.end();
@@ -550,7 +606,28 @@ void setup()
 	{
 		Serial.printf("Trying to connect to NTP server '%s'\n", ntpServer);
 		configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
+
   		printLocalTime();
+	}
+	else
+	{
+		Serial.println("no valid NTP server address was loaded.");
+
+		struct tm tm;
+		tm.tm_year = 0;
+    	tm.tm_mon = 0;
+    	tm.tm_mday = 1;
+    	tm.tm_hour = 0;
+    	tm.tm_min = 0;
+    	tm.tm_sec = 0;
+
+    	time_t t = mktime(&tm);
+
+   		printf("Setting time: %s", asctime(&tm));
+
+    	struct timeval now = { .tv_sec = t };
+
+    	settimeofday(&now, NULL);	
 	}
 	//
 
@@ -585,7 +662,8 @@ void loop()
 
 	if(clear_credentials_flag)
 	{
-		clear_wifi_credentials();
+		clearEEPROM();
+	//	clear_wifi_credentials();
 		clear_credentials_flag = false;
 	}
 
@@ -593,6 +671,19 @@ void loop()
 
 
 
+
+void clearEEPROM()
+{
+	char buff[max_mem];
+	for(int i=0; i<max_mem; i++)
+		buff[i] = 255;
+
+	EEPROM.begin(max_mem);
+	EEPROM.writeBytes(0, buff, max_mem);
+	EEPROM.end();
+
+	Serial.println(">> EEPROM cleared!");
+}
 
 
 void clear_wifi_credentials()
@@ -612,14 +703,11 @@ void clear_wifi_credentials()
 		Serial.println("WiFi Configurations Cleared!");
 	}
 
-		//continue
+
+	clearEEPROM();
+
+	//continue
 	delay(1000);
 
 	ESP.restart();
-	
-}
-
-void set_clear_credetial_flag()
-{
-	clear_credentials_flag = true;
 }

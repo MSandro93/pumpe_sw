@@ -5,13 +5,14 @@ uint8_t butt_pin = 34;
 uint8_t rel1_pin = 32;
 uint8_t rel2_pin = 33;
 
+extern bool clear_credentials_flag;
 
 //ISRs
 void but1_isr(void)
 {
     Serial.println(">>>> INTERRUPT TRIGGERED!!! <<<<");
 
-    set_clear_credetial_flag();
+    clear_credentials_flag = true;
 }
 //
 

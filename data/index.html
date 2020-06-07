@@ -49,6 +49,8 @@
         <legend>Openweathermaps</legend>
         <label>API Key: </label> <input type="text" name="apiKey_input">
         <button name="apiKey_button" type="button">API Key setzen</button>
+        <label>Stadt: </label> <input type="text" name="city_input">
+        <button name="city_button" type="button">Stadt setzen</button>
       </fieldset>
       
 
@@ -86,7 +88,10 @@
 
         const response = await getData('SetNTP;' + inputText);
 
-        form.querySelector('input[name="nptServer"]').value = response;
+        const resps = response.split(';');
+
+        form.querySelector('input[name="nptServer"]').value = resps[0];
+        form.querySelector('span[name="serverTime"]').innerHTML = resps[1];
       });
 
 
@@ -132,6 +137,16 @@
       });
 
 
+      form.querySelector('button[name="city_button"]').addEventListener('click', async event =>
+      {
+        const inputText = form.querySelector('input[name="city_input"]').value;
+
+        const response = await getData('SetCity;' + inputText);
+
+        form.querySelector('input[name="city_input"]').value = response;
+      });
+
+
 
       function getTsFromStr(ts_)
       {
@@ -156,6 +171,8 @@
 
         form.querySelector('span[name="serverTime"]').innerHTML = resps_time[0];
         form.querySelector('input[name="nptServer"]').value = resps_time[1];
+        form.querySelector('input[name="apiKey_input"]').innerHTML = resps_time[2];
+        form.querySelector('input[name="city_input"]').value = resps_time[3];
         /**/
 
         
