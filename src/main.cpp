@@ -10,6 +10,7 @@
 #include <ESPAsyncWiFiManager.h>
 #include "esp_wifi.h"
 #include "time.h"
+#include "Ticker.h"
 
 //custom
 #include "gpios.h"
@@ -19,11 +20,14 @@
 
 
 //memory-areas
+#define max_mem 	190
+
 #define ntp_add 	0
 #define mstart_add 	100
 #define mstop_add 	110
 #define astart_add 	120
 #define astop_add 	130
+#define apiKey_add 	140
 //
 
 
@@ -44,6 +48,7 @@ typedef struct timestamp
 {
 	uint8_t stunden = 0;
 	uint8_t minuten = 0;
+	uint16_t inMinuten = 0;
 };
 
 timestamp morgens_start;
@@ -51,6 +56,50 @@ timestamp morgens_stop;
 timestamp abends_start;
 timestamp abends_stop;
 //
+
+
+bool morgen_quiet = false;
+bool abend_quiet = false;
+bool forced_on = false;
+
+
+char api_key[50];
+#define API_KEY_LENGTH 32
+
+
+void check_time(void);
+Ticker time_schedule(check_time, 1000, 0, MILLIS);
+
+
+void check_time()
+{
+	tm timeinfo;
+	getLocalTime(&timeinfo);
+
+	uint32_t currentTime = timeinfo.tm_hour * 60 + timeinfo.tm_min;  // [min]
+
+	if( (morgens_start.inMinuten <= currentTime) && (currentTime <= morgens_stop.inMinuten) && !morgen_quiet)
+	{
+		Rel_switch(1, 1);
+	}
+
+	else if( (abends_start.inMinuten <= currentTime) && (currentTime <= abends_stop.inMinuten) && !abend_quiet)
+	{
+		Rel_switch(1, 1);
+	}
+
+	else if (forced_on)
+	{
+		Serial.println(">> forced on = true");
+		Rel_switch(1, 1);
+	}
+
+	else
+	{
+		Rel_switch(1, 0);
+	}
+	
+}
 
 
 bool onlyACSII(char* str_, int len_)
@@ -88,7 +137,7 @@ void setTimestamp(timestamp* ts_, char* str_)
 
 	ts_->stunden = 	atoi(parts[0]);
 	ts_->minuten = 	atoi(parts[1]);
-
+	ts_->inMinuten = ts_->stunden*60 + ts_->minuten;
 }
 
 int getMinutesFromStr(char* str_)
@@ -162,6 +211,23 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 
 		Serial.println("switching on relais 1");
 		Rel_switch(1, 1);
+
+		forced_on = true;
+
+		//if the pump is supposed to run at the moment, the dedicated quiet-flag shall be cleared
+		tm timeinfo;
+		getLocalTime(&timeinfo);
+		uint32_t currentTime = timeinfo.tm_hour * 60 + timeinfo.tm_min;  // [min]
+
+		if((morgens_start.inMinuten <= currentTime) && (currentTime <= morgens_stop.inMinuten))
+		{
+			morgen_quiet = false;
+		}
+		else if((abends_start.inMinuten <= currentTime) && (currentTime <= abends_stop.inMinuten))
+		{
+			abend_quiet = false;
+		}
+		//
 	}
 
 	else if(strcmp(elements[0], "pump_off") == 0)
@@ -170,6 +236,23 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 
 		Serial.println("switching off relais 1");
 		Rel_switch(1, 0);
+
+		forced_on = false;
+
+		//if the pump is supposed to run at the moment, the dedicated quiet-flag shall be set
+		tm timeinfo;
+		getLocalTime(&timeinfo);
+		uint32_t currentTime = timeinfo.tm_hour * 60 + timeinfo.tm_min;  // [min]
+
+		if((morgens_start.inMinuten <= currentTime) && (currentTime <= morgens_stop.inMinuten))
+		{
+			morgen_quiet = true;
+		}
+		else if((abends_start.inMinuten <= currentTime) && (currentTime <= abends_stop.inMinuten))
+		{
+			abend_quiet = true;
+		}
+		//
 	}
 
 	else if(strcmp(elements[0], "GetServerTime") == 0)
@@ -207,7 +290,7 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 		strcpy(ntpServer, elements[1]);
 
 		//write NTP server address to EEPROM
-		EEPROM.begin(140);
+		EEPROM.begin(max_mem);
 		EEPROM.writeBytes(ntp_add, ntpServer, strlen(ntpServer));
 		EEPROM.writeByte( (ntp_add + strlen(ntpServer)), 0);  //termiante string by 0
 		EEPROM.end();
@@ -279,7 +362,7 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 			setTimestamp(&abends_stop,   elements[4]);
 
 			//store timestamps to EEPROM
-			EEPROM.begin(140);
+			EEPROM.begin(max_mem);
 
 			EEPROM.writeBytes(mstart_add, &morgens_start, sizeof(timestamp));
 			EEPROM.writeBytes(mstop_add, &morgens_stop, sizeof(timestamp));
@@ -292,6 +375,7 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 			
 		}
 
+
 		else
 		{
 			Serial.println("New schedule was invalid.");
@@ -301,6 +385,39 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 		
 		
 	}
+
+	else if(strcmp(elements[0], "reboot") == 0)
+	{
+		ESP.restart();
+		request->send(200);
+	}
+	
+
+
+	else if(strcmp(elements[0], "SetAPIKey") == 0)
+	{
+		//if no new API-Key was send, termiante
+		if(elements_cnt<2)
+		{
+			request->send(401);
+			return;
+		}
+		//
+
+
+		strncpy(api_key, elements[1], API_KEY_LENGTH);
+		api_key[API_KEY_LENGTH + 1] = 0;  //termiante string by 0
+
+		Serial.printf(">> new API-Key: |%s|\n", api_key);
+
+		EEPROM.begin(max_mem);
+		EEPROM.writeBytes(apiKey_add, api_key, API_KEY_LENGTH + 1);
+		EEPROM.end();
+
+		request->send(200, "text/plain", api_key); 
+
+	}
+
 	
 
 	else
@@ -336,7 +453,7 @@ void setup()
 
 	////EEPROM
 	char buff[100];
-	EEPROM.begin(140);
+	EEPROM.begin(max_mem);
 
 	//load ntp server address
 	EEPROM.readBytes(ntp_add, buff, 100);
@@ -371,6 +488,10 @@ void setup()
 	Serial.println("loaded 'abends_stop' from EEPROM.");
 	//
 
+	//load API-Key for Openwaethermaps
+	EEPROM.readBytes(apiKey_add, api_key,  API_KEY_LENGTH);
+	Serial.println("API Key for waether API laoded.");
+	//
 
 	EEPROM.end();
 	////
@@ -446,10 +567,22 @@ void setup()
   
 	//start server
   	server.begin();
+
+
+	//start Ticker
+	time_schedule.start();
+
+
+
+
+
+
 }
 
 void loop()
 {
+	time_schedule.update();
+
 	if(clear_credentials_flag)
 	{
 		clear_wifi_credentials();

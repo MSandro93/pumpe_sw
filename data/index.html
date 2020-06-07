@@ -43,6 +43,19 @@
         </p>
 
       </fieldset>
+
+
+      <fieldset>
+        <legend>Openweathermaps</legend>
+        <label>API Key: </label> <input type="text" name="apiKey_input">
+        <button name="apiKey_button" type="button">API Key setzen</button>
+      </fieldset>
+      
+
+      <fieldset>
+        <legend>System</legend>
+        <button name="reboot" type="button">Neustart</button>
+      </fieldset>
       
     </form>
 
@@ -98,6 +111,24 @@
           alert("Zeitpunkte passen nicht zusammen! (z.B. ein 'bis' liegt zeitlich vor einem 'von')");
         }
         
+      });
+
+
+      form.querySelector('button[name="reboot"]').addEventListener("click", event => 
+      {
+        event.preventDefault();
+
+        fetch("http://pumpe/html", { method: 'POST', body: JSON.stringify("reboot") })
+      });
+
+
+      form.querySelector('button[name="apiKey_button"]').addEventListener('click', async event =>
+      {
+        const inputText = form.querySelector('input[name="apiKey_input"]').value;
+
+        const response = await getData('SetAPIKey;' + inputText);
+
+        form.querySelector('input[name="apiKey_input"]').value = response;
       });
 
 
