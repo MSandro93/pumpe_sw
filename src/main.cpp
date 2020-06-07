@@ -137,13 +137,36 @@ void check_time()
 }
 
 
-bool onlyACSII(char* str_, int len_)
+bool getValidString(uint8_t* str_, char* str_dest, int len_)
 {
-	for(int i=0; i<len_; i++)
+	int i = 0;
+	bool foundTermination = false;
+
+	for (; i < len_; i++)	//search for string termiantion
 	{
-		if(str_[i]<32 || str_[i]>216)
-			return false;
+		if (str_[i] == 0)
+		{
+			foundTermination = true;
+			break;
+		}
 	}
+
+	if (!foundTermination)	//no termiantion was found
+	{
+		str_dest[0] = '\0'; //terminate output sring
+		return false;
+	}
+
+	for (int j = 0; j < i; j++)
+	{
+		if ((str_[j] < 32) || (str_[j] > 127))  //a not 'printable' char was found
+		{
+			str_dest[0] = '\n'; //terminate output sring
+			return false;
+		}
+	}
+
+	memcpy(str_dest, str_, i + 1); //copy valid string
 
 	return true;
 }
@@ -300,7 +323,7 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 
 		struct tm timeinfo;
 
-		if(!getLocalTime(&timeinfo), 1000)
+		if(!getLocalTime(&timeinfo))
   		{
 			request->send(500);
 			return;
@@ -510,18 +533,13 @@ void setup()
 
 
 	////EEPROM
-	char buff[100];
+	uint8_t buff[100];
 	EEPROM.begin(max_mem);
 
 	//load ntp server address
 	EEPROM.readBytes(ntp_add, buff, 100);
-
-
-	if(onlyACSII(buff, strlen(buff)))
-	{
-		sprintf(ntpServer, "%s", buff);
-		Serial.println("loaded ntp server address from EEPROM.");
-	}
+	getValidString(buff, ntpServer, 100);
+	
 	//
 
 	//load schedule
@@ -545,8 +563,7 @@ void setup()
 
 	//load city for Openweathermaps
 	EEPROM.readBytes(city_add, buff, 20);
-	sprintf(city, "%s", buff);
-	Serial.println("City loaded.");
+	getValidString(buff, city, 20);
 	//
 
 	EEPROM.end();
@@ -602,13 +619,12 @@ void setup()
 	//
 
 	//NTP
-	if(onlyACSII(ntpServer, strlen(ntpServer)))
+	if(strcmp(ntpServer, "") != 0)
 	{
 		Serial.printf("Trying to connect to NTP server '%s'\n", ntpServer);
 		configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
-
-  		printLocalTime();
 	}
+	
 	else
 	{
 		Serial.println("no valid NTP server address was loaded.");
@@ -629,6 +645,8 @@ void setup()
 
     	settimeofday(&now, NULL);	
 	}
+
+	printLocalTime();
 	//
 
   
