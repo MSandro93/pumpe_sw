@@ -47,10 +47,14 @@
 
       <fieldset>
         <legend>Openweathermaps</legend>
-        <label>API Key: </label> <input type="text" name="apiKey_input">
+        <label>API Key: </label> <input type="text" name="apiKey_input" size="40">
         <button name="apiKey_button" type="button">API Key setzen</button>
         <label>Stadt: </label> <input type="text" name="city_input">
         <button name="city_button" type="button">Stadt setzen</button>
+        <p>
+          <label>Niederschlag morgen (Vorhersage): </label> <input type="text" name="forecast_input">
+          <button name="getForecast" type="button">hole Vorhersage</button>
+        </p>
       </fieldset>
       
 
@@ -147,13 +151,25 @@
       });
 
 
-
-      function getTsFromStr(ts_)
+      form.querySelector('button[name="getForecast"]').addEventListener('click', async event =>
       {
-        const arr = ts_.split(":");
+        const response = await getData('getForecast;');
 
-        return parseInt(arr[0])*60 + parseInt(arr[1])
-      }
+        if(response == -1)
+        {
+          form.querySelector('input[name="forecast_input"]').value = "";
+          alert("Wettervorhersage konnte nicht bezogen werden. API-Key falsch/abgelaufen?")
+        }
+
+        else
+        {
+          form.querySelector('input[name="forecast_input"]').value = response;
+        }
+      });
+
+
+
+
 
       async function getData(req)
       {

@@ -16,6 +16,7 @@
 //custom
 #include "gpios.h"
 #include "main.h"
+#include "weather.h"
 
 
 
@@ -69,43 +70,14 @@ Ticker time_schedule(check_time, 1000, 0, MILLIS);
 //
 
 //everything for the weather forecaste
-char api_key[50];
-char city[50];
+char api_key[33];
+char city[20];
 #define API_KEY_LENGTH 32
-
-HTTPClient http;
 //
 
 
 
-
-
-
-int getTomorrowWeather()
-{
-	char url[100];
-	String resp;
-
-	sprintf(url, "http://api.openweathermap.org/data/2.5/forecast/?q=%s,de&appid=%s", city, api_key);
-	http.begin(url);
-
-	int httpCode = http.GET();
-	if(  httpCode!= 200)
-	{
-		Serial.printf("Failed to fetch weather forecast: %d\n", httpCode);
-		return -1;
-	}
-
-	Serial.println("Got weather forecaste.");
-	
-	resp = http.getString();
-
-	Serial.println(resp);
-
-	return 0;
-}
-
-
+//checks if it is time to enable/disable the pump.
 void check_time()
 {
 	tm timeinfo;
@@ -135,7 +107,6 @@ void check_time()
 	}
 	
 }
-
 
 bool getValidString(uint8_t* str_, char* str_dest, int len_)
 {
@@ -200,7 +171,7 @@ void setTimestamp(timestamp* ts_, char* str_)
 
 int getMinutesFromStr(char* str_)
 {
-	char buff[20];
+	char* buff = (char*)malloc(20);
 
 	strcpy(buff, str_);
 	buff[strlen(str_)] = 0;
@@ -215,10 +186,16 @@ int getMinutesFromStr(char* str_)
 	}
 
 	if(cnt != 2)
+	{	
+		free(buff);
 		return -1;
+	}
 		
 	else
+	{
+		free(buff);
 		return atoi(parts[0])*60 +  atoi(parts[1]);
+	}
 }
 
 
@@ -315,7 +292,7 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 
 	else if(strcmp(elements[0], "GetServerTime") == 0)
 	{
-		char buff[200] = {0};
+		char* buff = (char*)malloc(200);
 		for(int i=0; i<100; i++)
 			buff[0] = 0;
 
@@ -328,12 +305,12 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 			request->send(500);
 			return;
 		}
-		
-		Serial.println("  >> got here! <<");
-
+				
   		sprintf(buff, "%02d:%02d:%02d  %02d.%02d.%04d;%s;%s;%s;", timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec, timeinfo.tm_mday, timeinfo.tm_mon, (timeinfo.tm_year + 1900), ntpServer, api_key, city);
 
 		request->send(200, "text/plain", buff); 
+
+		free(buff);
 	}
 
 	else if(strcmp(elements[0], "SetNTP") == 0)
@@ -466,7 +443,7 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 
 
 		strncpy(api_key, elements[1], API_KEY_LENGTH);
-		api_key[API_KEY_LENGTH + 1] = 0;  //termiante string by 0
+		api_key[API_KEY_LENGTH] = 0;  //termiante string by 0
 
 		Serial.printf(">> new API-Key: |%s|\n", api_key);
 
@@ -499,6 +476,14 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 		request->send(200, "text/plain", city); 
 	}
 
+	else if(strcmp(elements[0], "getForecast") == 0)
+	{
+		char* buff = (char*)malloc(10);
+		sprintf(buff, "%.3f", getRainVolumeTomorrow(api_key, city));
+
+		request->send(200, "text/plain", buff); 
+		free(buff);
+	}
 	
 
 	else
@@ -528,12 +513,18 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 
 void setup()
 {
+	volatile int hs = ESP.getFreeHeap();
+
+	//init GPIOs
+	GPIO_init_custom();
+	//
+
 	//inti serial console
 	Serial.begin(115200);
 
 
 	////EEPROM
-	uint8_t buff[100];
+	uint8_t* buff = (uint8_t*)malloc(100);
 	EEPROM.begin(max_mem);
 
 	//load ntp server address
@@ -557,7 +548,7 @@ void setup()
 	//
 
 	//load API-Key for Openweathermaps
-	EEPROM.readBytes(apiKey_add, api_key,  API_KEY_LENGTH);
+	EEPROM.readBytes(apiKey_add, api_key,  API_KEY_LENGTH + 1);  //+1 to get the termianting zero
 	Serial.println("API Key for waether API loaded.");
 	//
 
@@ -566,6 +557,7 @@ void setup()
 	getValidString(buff, city, 20);
 	//
 
+	free(buff);
 	EEPROM.end();
 	////
 
@@ -670,7 +662,7 @@ void setup()
 
 
 
-
+	
 
 }
 
@@ -692,7 +684,7 @@ void loop()
 
 void clearEEPROM()
 {
-	char buff[max_mem];
+	char* buff = (char*)malloc(max_mem);
 	for(int i=0; i<max_mem; i++)
 		buff[i] = 255;
 
@@ -700,6 +692,7 @@ void clearEEPROM()
 	EEPROM.writeBytes(0, buff, max_mem);
 	EEPROM.end();
 
+	free(buff);
 	Serial.println(">> EEPROM cleared!");
 }
 
