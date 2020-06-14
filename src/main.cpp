@@ -67,10 +67,12 @@ bool abend_quiet = false;
 bool forced_on = false;
 float threshold = 0.0f;
 bool forecaste_uptodate = false;
+uint32_t real_watering_time_today = 0;   //[sec.]
+#define one_tick_in_mills 1000
 
 
 void check_time(void);
-Ticker time_schedule(check_time, 1000, 0, MILLIS);
+Ticker time_schedule(check_time, one_tick_in_mills, 0, MILLIS);
 //
 
 //everything for the weather forecaste
@@ -88,8 +90,14 @@ void check_time()
 	getLocalTime(&timeinfo);
 	uint32_t currentTime = timeinfo.tm_hour * 60 + timeinfo.tm_min;  // [min]
 
+	if(real_watering_time_today >= 2.5f * 3600)  //if too much water flew today, stop! (pump was active for 2.5 hours or more)
+	{
+		Rel_switch(1, 0);
+		return;
+	}
 
-	if((timeinfo.tm_hour == 20) && (timeinfo.tm_min == 0) && (!forecaste_uptodate) )
+
+	if((timeinfo.tm_hour == 23) && (timeinfo.tm_min == 58) && (!forecaste_uptodate) )
 	{
 		if( getRainVolumeTomorrow(api_key, city) > threshold )
 		{
@@ -105,9 +113,12 @@ void check_time()
 		forecaste_uptodate = true;
 	}
 
-	if((timeinfo.tm_hour == 20) && (timeinfo.tm_min == 1))
+	if((timeinfo.tm_hour == 23) && (timeinfo.tm_min == 59))
 	{
 		forecaste_uptodate = false;
+		Serial.printf( "  >> Heute wurde %d Sekunden gegossen. <<\n", real_watering_time_today);
+		Serial.println("  >>      Gute Nacht... Zzzzz...       <<");
+		real_watering_time_today = 0; //reset time-counter
 	}
 
 
@@ -115,17 +126,20 @@ void check_time()
 	if( (morgens_start.inMinuten <= currentTime) && (currentTime <= morgens_stop.inMinuten) && !morgen_quiet)
 	{
 		Rel_switch(1, 1);
+		real_watering_time_today += (int)(one_tick_in_mills/1000.0f);
 	}
 
 	else if( (abends_start.inMinuten <= currentTime) && (currentTime <= abends_stop.inMinuten) && !abend_quiet)
 	{
 		Rel_switch(1, 1);
+		real_watering_time_today += (int)(one_tick_in_mills/1000.0f);
 	}
 
 	else if (forced_on)
 	{
 		Serial.println(">> forced on = true");
 		Rel_switch(1, 1);
+		real_watering_time_today += (int)(one_tick_in_mills/1000.0f);
 	}
 
 	else
@@ -521,19 +535,7 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 
 			char* buff = (char*)malloc(10);
 			sprintf(buff, "%.3f", threshold);
-
-			if( getRainVolumeTomorrow(api_key, city) > threshold )		//renew forecast and decide about watering tomorrow.
-			{
-				morgen_quiet = true;
-				abend_quiet = true;
-			}
-			else
-			{
-				morgen_quiet = false;
-				abend_quiet = false;
-			}
 			
-
 			request->send(200, "text/plain", buff);
 		}
 
