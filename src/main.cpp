@@ -31,6 +31,7 @@
 #define astop_add 	130	//10
 #define apiKey_add 	140	//32
 #define city_add 	180 //20
+#define th_add		200 //4
 //
 
 
@@ -64,6 +65,9 @@ timestamp abends_stop;
 bool morgen_quiet = false;
 bool abend_quiet = false;
 bool forced_on = false;
+float threshold = 0.0f;
+bool forecaste_uptodate = false;
+
 
 void check_time(void);
 Ticker time_schedule(check_time, 1000, 0, MILLIS);
@@ -82,8 +86,31 @@ void check_time()
 {
 	tm timeinfo;
 	getLocalTime(&timeinfo);
-
 	uint32_t currentTime = timeinfo.tm_hour * 60 + timeinfo.tm_min;  // [min]
+
+
+	if((timeinfo.tm_hour == 20) && (timeinfo.tm_min == 0) && (!forecaste_uptodate) )
+	{
+		if( getRainVolumeTomorrow(api_key, city) > threshold )
+		{
+			morgen_quiet = true;
+			abend_quiet = true;
+		}
+		else
+		{
+			morgen_quiet = false;
+			abend_quiet = false;
+		}
+
+		forecaste_uptodate = true;
+	}
+
+	if((timeinfo.tm_hour == 20) && (timeinfo.tm_min == 1))
+	{
+		forecaste_uptodate = false;
+	}
+
+
 
 	if( (morgens_start.inMinuten <= currentTime) && (currentTime <= morgens_stop.inMinuten) && !morgen_quiet)
 	{
@@ -223,12 +250,6 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 
 
 
-	for(int i=0; i<elements_cnt; i++)
-	{
-		Serial.printf(">> |%s|\n", elements[i]);
-	}
-
-
 	Serial.printf("found %d elements in response\n", elements_cnt);
 
 	//if there was no elemt in the body, terminate
@@ -306,7 +327,7 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 			return;
 		}
 				
-  		sprintf(buff, "%02d:%02d:%02d  %02d.%02d.%04d;%s;%s;%s;", timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec, timeinfo.tm_mday, timeinfo.tm_mon, (timeinfo.tm_year + 1900), ntpServer, api_key, city);
+  		sprintf(buff, "%02d:%02d:%02d  %02d.%02d.%04d;%s;%s;%s;%.3f;", timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec, timeinfo.tm_mday, timeinfo.tm_mon, (timeinfo.tm_year + 1900), ntpServer, api_key, city, threshold);
 
 		request->send(200, "text/plain", buff); 
 
@@ -484,6 +505,44 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 		request->send(200, "text/plain", buff); 
 		free(buff);
 	}
+
+	else if(strcmp(elements[0], "setThreshold") == 0)
+	{
+		float f = 0.0f;
+		if( sscanf(elements[1], "%f", &f) == 1)
+		{
+			threshold = f;
+
+			EEPROM.begin(max_mem);
+			EEPROM.writeFloat(th_add, threshold);
+			EEPROM.end();
+
+			Serial.printf("threshold set to %.3f mm.\n", threshold);
+
+			char* buff = (char*)malloc(10);
+			sprintf(buff, "%.3f", threshold);
+
+			if( getRainVolumeTomorrow(api_key, city) > threshold )		//renew forecast and decide about watering tomorrow.
+			{
+				morgen_quiet = true;
+				abend_quiet = true;
+			}
+			else
+			{
+				morgen_quiet = false;
+				abend_quiet = false;
+			}
+			
+
+			request->send(200, "text/plain", buff);
+		}
+
+		else
+		{
+			Serial.println("Invalid threshold");
+			request->send(400);
+		}
+	}
 	
 
 	else
@@ -513,8 +572,6 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 
 void setup()
 {
-	volatile int hs = ESP.getFreeHeap();
-
 	//init GPIOs
 	GPIO_init_custom();
 	//
@@ -555,6 +612,10 @@ void setup()
 	//load city for Openweathermaps
 	EEPROM.readBytes(city_add, buff, 20);
 	getValidString(buff, city, 20);
+	//
+
+	//load threshold
+	threshold = EEPROM.readFloat(th_add);
 	//
 
 	free(buff);

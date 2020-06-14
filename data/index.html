@@ -55,6 +55,11 @@
           <label>Niederschlag morgen (Vorhersage): </label> <input type="text" name="forecast_input">
           <button name="getForecast" type="button">hole Vorhersage</button>
         </p>
+        <p>
+          <label>Schwellwert [mm]: </label> <input type="text" name="threshold_input">
+          <button name="threshold_button" type="button">Schwellwert setzen</button>
+          <span> (Wenn die vorhergesagte Niederschalgsmenge über dem Schwellwert liegt, wird am kommenden Tag nicht gegoßen.)</span>
+        </p>
       </fieldset>
       
 
@@ -174,6 +179,15 @@
       });
 
 
+      form.querySelector('button[name="threshold_button"]').addEventListener('click', async event =>
+      {
+        const inputText = form.querySelector('input[name="threshold_input"]').value;
+
+        const response = await getData('setThreshold;' + inputText);
+
+        form.querySelector('input[name="threshold_input"]').value = response;
+      });
+
 
 
 
@@ -195,6 +209,7 @@
         form.querySelector('input[name="nptServer"]').value = resps_time[1];
         form.querySelector('input[name="apiKey_input"]').value = resps_time[2];
         form.querySelector('input[name="city_input"]').value = resps_time[3];
+        form.querySelector('input[name="threshold_input"]').value = resps_time[4];
         /**/
 
         

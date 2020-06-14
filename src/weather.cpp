@@ -101,8 +101,6 @@ float getRainVolumeTomorrow(const char* api_key_, const char* city_)
 	tomorrow_day = timeinfo.tm_mday;
 	tomorrow_mon = timeinfo.tm_mon + 1;
 
-	Serial.printf("> morgen: %d.%d\n", tomorrow_day, tomorrow_mon);
-
 
 	for (int ei = 0; ei < elementcnt; ei++)
     {
