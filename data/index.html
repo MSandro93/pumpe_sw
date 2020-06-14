@@ -161,6 +161,12 @@
           alert("Wettervorhersage konnte nicht bezogen werden. API-Key falsch/abgelaufen?")
         }
 
+        else if(response == -2)
+        {
+          form.querySelector('input[name="forecast_input"]').value = "";
+          alert("Wettervorhersage konnte nicht verarbeitet werden.")
+        }
+
         else
         {
           form.querySelector('input[name="forecast_input"]').value = response;
