@@ -5,6 +5,7 @@
 #include "SPIFFS.h"
 #include <EEPROM.h>
 #include <HTTPClient.h>
+#include "log.h"
 
 //needed for library
 #include <ESPAsyncWebServer.h>
@@ -36,6 +37,8 @@
 
 
 
+FILE* logfile;
+char logfile_name[15];  //name of todays logfile
 
 AsyncWebServer server(80);
 DNSServer dns;
@@ -66,7 +69,7 @@ bool morgen_quiet = false;
 bool abend_quiet = false;
 bool forced_on = false;
 float threshold = 0.0f;
-bool forecaste_uptodate = false;
+bool forecaste_update = false;
 uint32_t real_watering_time_today = 0;   //[sec.]
 #define one_tick_in_mills 1000
 
@@ -97,7 +100,7 @@ void check_time()
 	}
 
 
-	if((timeinfo.tm_hour == 23) && (timeinfo.tm_min == 58) && (!forecaste_uptodate) )
+	if((timeinfo.tm_hour == 23) && (timeinfo.tm_min == 58) && (!forecaste_update) )
 	{
 		if( getRainVolumeTomorrow(api_key, city) > threshold )
 		{
@@ -110,17 +113,28 @@ void check_time()
 			abend_quiet = false;
 		}
 
-		forecaste_uptodate = true;
+		forecaste_update = true;
 	}
 
-	if((timeinfo.tm_hour == 23) && (timeinfo.tm_min == 59))
+	if((timeinfo.tm_hour == 23) && (timeinfo.tm_min == 58))
 	{
-		forecaste_uptodate = false;
+		forecaste_update = false;
 		Serial.printf( "  >> Heute wurde %d Sekunden gegossen. <<\n", real_watering_time_today);
 		Serial.println("  >>      Gute Nacht... Zzzzz...       <<");
 		real_watering_time_today = 0; //reset time-counter
 	}
 
+
+	if((timeinfo.tm_hour == 23) && (timeinfo.tm_min == 59))
+	{
+		fclose(logfile);
+		if(log_getState() == 0)
+		{
+			sprintf(logfile_name, "%2d.%2d.%4d.log", timeinfo.tm_mday, timeinfo.tm_mon+ 1 , timeinfo.tm_year + 1900);
+
+			logfile = fopen(logfile_name, "a");
+		}
+	}
 
 
 	if( (morgens_start.inMinuten <= currentTime) && (currentTime <= morgens_stop.inMinuten) && !morgen_quiet)
@@ -249,7 +263,7 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 
 	//cut requeset-body out of data
 	strncpy(body, (char*)(data+1), len-2);  //removes quotation marks around the body as well. I know... nasty...
-	body[len-2] = '\0';		//terminates te string propper
+	body[len-2] = '\0';		//terminates the string propper
 	//
 
 
@@ -546,6 +560,21 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 		}
 	}
 	
+	else if(strcmp(elements[0], "unmount") == 0)
+	{
+		fclose(logfile);
+		log_deinit();
+		request->send(200);
+		Serial.println("SD card unmounted.");
+	}
+
+	else if(strcmp(elements[0], "mount") == 0)
+	{
+		int tmp = log_init();
+		sprintf(body, "%d", tmp);			//just receicle this cunck of memory which is not used anymore.
+		request->send(200, "text/plain", body);
+		Serial.printf("mounting SD card -> %d.\n", tmp);
+	}
 
 	else
 	{
@@ -574,6 +603,9 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 
 void setup()
 {
+	log_init();
+
+
 	//init GPIOs
 	GPIO_init_custom();
 	//
@@ -629,7 +661,7 @@ void setup()
 	Serial.println("GPIOs initilized.");
 
 	//WiFiManager
-    //Local intialization. Once its business is done, there is no need to keep it around
+    //Local intialization. Once its business is done, there is no need to keep it around 
     AsyncWiFiManager wifiManager(&server,&dns);
 	Serial.println("Webserver initilized.");
     
@@ -736,7 +768,7 @@ void loop()
 	if(clear_credentials_flag)
 	{
 		clearEEPROM();
-	//	clear_wifi_credentials();
+		clear_wifi_credentials();
 		clear_credentials_flag = false;
 	}
 
