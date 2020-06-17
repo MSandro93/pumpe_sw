@@ -5,7 +5,7 @@
 #include "SPIFFS.h"
 #include <EEPROM.h>
 #include <HTTPClient.h>
-#include "Syslog.h"
+#include <Syslog.h>
 #include <Udp.h>
 
 //needed for library
@@ -358,7 +358,7 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 		free(response);
 	}
 	
-	else if(strcmp(elements[0], "setSchedule") == 0)
+	else if(strcmp(elements[0], "setScheudule") == 0)
 	{
 		//if no new ntp server adress was send, termiante
 		if(elements_cnt<5)

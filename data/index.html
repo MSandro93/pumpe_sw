@@ -39,7 +39,7 @@
         <label>bis: </label> <input type="text" name="t4_inp">
         </p>
         <p>
-          <button name="setSchedule" type="button">Gießzeiten festlegen</button>
+          <button name="setScheudule" type="button">Gießzeiten festlegen</button>
         </p>
 
       </fieldset>
@@ -96,7 +96,6 @@
         fetch("http://pumpe/html", { method: 'POST', body: JSON.stringify("pump_off") })
       });
 
-
       form.querySelector('button[name="SetNTP"]').addEventListener('click', async event =>
       {
         const inputText = form.querySelector('input[name="nptServer"]').value;
@@ -109,8 +108,7 @@
         form.querySelector('span[name="serverTime"]').innerHTML = resps[1];
       });
 
-
-      form.querySelector('button[name="setSchedule"]').addEventListener('click', async event =>
+      form.querySelector('button[name="setScheudule"]').addEventListener('click', async event =>
       {
         const t1_text = form.querySelector('input[name="t1_inp"]').value;
         const t2_text = form.querySelector('input[name="t2_inp"]').value;
@@ -123,7 +121,7 @@
             (getTsFromStr(t4_text) > getTsFromStr(t3_text)) )
         {
           const inputText = [t1_text,  t2_text, t3_text, t4_text].join(';');
-          const response = await getData('setSchedule;' + inputText);
+          const response = await getData('setScheudule;' + inputText);
         }
 
         else
@@ -133,14 +131,12 @@
         
       });
 
-
       form.querySelector('button[name="reboot"]').addEventListener("click", event => 
       {
         event.preventDefault();
 
         fetch("http://pumpe/html", { method: 'POST', body: JSON.stringify("reboot") })
       });
-
 
       form.querySelector('button[name="apiKey_button"]').addEventListener('click', async event =>
       {
@@ -151,7 +147,6 @@
         form.querySelector('input[name="apiKey_input"]').value = response;
       });
 
-
       form.querySelector('button[name="city_button"]').addEventListener('click', async event =>
       {
         const inputText = form.querySelector('input[name="city_input"]').value;
@@ -160,7 +155,6 @@
 
         form.querySelector('input[name="city_input"]').value = response;
       });
-
 
       form.querySelector('button[name="getForecast"]').addEventListener('click', async event =>
       {
@@ -184,7 +178,6 @@
         }
       });
 
-
       form.querySelector('button[name="threshold_button"]').addEventListener('click', async event =>
       {
         const inputText = form.querySelector('input[name="threshold_input"]').value;
@@ -193,7 +186,6 @@
 
         form.querySelector('input[name="threshold_input"]').value = response;
       });
-
 
       form.querySelector('button[name="unmount"]').addEventListener('click', async event =>
       {
@@ -207,6 +199,13 @@
 
 
 
+      
+      function getTsFromStr(ts_)
+      {
+        const arr = ts_.split(":");
+
+        return parseInt(arr[0])*60 + parseInt(arr[1])
+      }
 
       async function getData(req)
       {
