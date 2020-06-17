@@ -27,8 +27,8 @@ int scheuduler_addAppointment(int h_, int m_, void (*fp_)(), const char* desc_)
 {
     if ((appointment_list_cnt + 1) > max_nbr_appointsments)
     {
-        Serial.printf("failed toa add appointment \"%s\": maximum number (%d)of appointments reached.\n", desc_, max_nbr_appointsments);
-        syslog.logf(LOG_DEBUG, "failed toa add appointment \"%s\": maximum number (%d)of appointments reached.", desc_, max_nbr_appointsments);
+        Serial.printf("failed to add appointment \"%s\": maximum number (%d)of appointments reached.\n", desc_, max_nbr_appointsments);
+        syslog.logf(LOG_DEBUG, "failed to add appointment \"%s\": maximum number (%d)of appointments reached.", desc_, max_nbr_appointsments);
 
         return -1;
     }
@@ -47,10 +47,11 @@ int scheuduler_addAppointment(int h_, int m_, void (*fp_)(), const char* desc_)
 
         appointment_list_cnt++;
     }
-    return 0;
 
-    Serial.printf("appointment \"%s\" a for %d:%d", desc_, h_, m_);
-    syslog.logf(LOG_DEBUG, "appointment \"%s\" a for %d:%d", desc_, h_, m_);
+    Serial.printf("appointment \"%s\" added for %02d:%02d\n", desc_, h_, m_);
+    syslog.logf(LOG_DEBUG, "appointment \"%s\" added for %02d:%02d", desc_, h_, m_);
+
+    return 0;
 }
 
 
@@ -106,6 +107,17 @@ int scheuduler_setActive(const char* desc_, bool active_)
         if (strcmp(appointment_list[i]->description, desc_) == 0)
         {
             appointment_list[i]->pending_today = active_;
+            
+            if(active_)
+            {
+                syslog.logf(LOG_INFO, "appointment \"%s\" was enabled.", desc_);
+                Serial.printf("appointment \"%s\" was enabled.\n", desc_);
+            }
+            else
+            {
+                syslog.logf(LOG_INFO, "appointment \"%s\" was disabled.", desc_);
+                Serial.printf("appointment \"%s\" was disabled.\n", desc_);
+            }
             return 0;
         }
     }

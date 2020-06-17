@@ -1,5 +1,5 @@
 
-#define max_nbr_appointsments 5
+#define max_nbr_appointsments 7
 #define one_tick_in_mills 1000
 
 struct appointment

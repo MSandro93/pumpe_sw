@@ -68,12 +68,6 @@
         <button name="reboot" type="button">Neustart</button>
       </fieldset>
       
-      <fieldset>
-        <legend>SD-karte</legend>
-        <button name="unmount" type="button">aushängen</button>
-        <button name="mount" type="button">einhängen</button>
-      </fieldset>
-      
     </form>
 
  
@@ -187,19 +181,9 @@
         form.querySelector('input[name="threshold_input"]').value = response;
       });
 
-      form.querySelector('button[name="unmount"]').addEventListener('click', async event =>
-      {
-        fetch("http://pumpe/html", { method: 'POST', body: JSON.stringify("unmount") })
-      });
-
-      form.querySelector('button[name="mount"]').addEventListener('click', async event =>
-      {
-        fetch("http://pumpe/html", { method: 'POST', body: JSON.stringify("mount") })
-      });
 
 
 
-      
       function getTsFromStr(ts_)
       {
         const arr = ts_.split(":");
@@ -230,7 +214,7 @@
 
         
         /*get current time schedule*/
-        const response_sched = await getData('getSchedule');
+        const response_sched = await getData('getScheudule');
 
         const resps_sched = response_sched.split(';');
 

@@ -54,7 +54,7 @@ const int   daylightOffset_sec = 3600;
 
 
 ////everything for the scheuduler
-typedef struct timestamp
+struct timestamp
 {
 	int stunden = 0;
 	int minuten = 0;
@@ -97,6 +97,9 @@ void firstTaskOfDay()
 
 	//get weatherforecast of today and deactivate watering-periodes, if nessaccary
     float rain = getRainVolumeToday(api_key, city);
+
+	Serial.printf("new weatherforecast was requested (rain today: %.3fmm)\n", rain);
+	syslog.logf(LOG_INFO, "new weatherforecast was requested (rain today: %.3fmm)\n", rain);
 
 	if(rain > threshold)
 	{
@@ -163,25 +166,10 @@ void printLocalTime()
     return;
   }
 
-  syslog.logf(LOG_INFO, "got time froms NTP server: %02d.%02d.%04d  %02d:%02d:%02d", timeinfo.tm_mday, timeinfo.tm_mon+1, timeinfo.tm_year+1900, timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec);
-  Serial.printf("got time froms NTP server: %02d.%02d.%04d  %02d:%02d:%02d", timeinfo.tm_mday, timeinfo.tm_mon+1, timeinfo.tm_year+1900, timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec);
+  syslog.logf(LOG_INFO, "got time from NTP server: %02d.%02d.%04d  %02d:%02d:%02d", timeinfo.tm_mday, timeinfo.tm_mon+1, timeinfo.tm_year+1900, timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec);
+  Serial.printf("got time from NTP server: %02d.%02d.%04d  %02d:%02d:%02d", timeinfo.tm_mday, timeinfo.tm_mon+1, timeinfo.tm_year+1900, timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec);
 }
 
-void setTimestamp(timestamp* ts_, char* str_)
-{
-	char* parts[4];
-	int cnt = 0;
-
-	parts[cnt] = strtok(str_, ":");
-	while(parts[cnt] != NULL)
-	{
-		parts[++cnt] = strtok(NULL, ":");
-	}
-
-	ts_->stunden = 	atoi(parts[0]);
-	ts_->minuten = 	atoi(parts[1]);
-	ts_->inMinuten = ts_->stunden*60 + ts_->minuten;
-}
 
 int getMinutesFromStr(char* str_)
 {
@@ -236,9 +224,6 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 	//
 
 
-
-	Serial.printf("found %d elements in response\n", elements_cnt);
-
 	//if there was no elemt in the body, terminate
 	if(elements_cnt<1)
 	{
@@ -251,16 +236,12 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 	if(strcmp(elements[0], "pump_on") == 0)
 	{
 		request->send(200);
-
-		Serial.println("switching on pump.");
 		pump_on();
 	}
 
 	else if(strcmp(elements[0], "pump_off") == 0)
 	{
 		request->send(200);
-
-		Serial.println("switching off pump.");
 		pump_off();
 	}
 
@@ -270,7 +251,6 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 		for(int i=0; i<100; i++)
 			buff[0] = 0;
 
-		Serial.println("Server time was requested");
 
 		struct tm timeinfo;
 
@@ -283,6 +263,9 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
   		sprintf(buff, "%02d:%02d:%02d  %02d.%02d.%04d;%s;%s;%s;%.3f;", timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec, timeinfo.tm_mday, timeinfo.tm_mon, (timeinfo.tm_year + 1900), ntpServer, api_key, city, threshold);
 
 		request->send(200, "text/plain", buff); 
+
+		syslog.log(LOG_INFO, "Server time was requested.");
+		Serial.println("Server time was requested.");
 
 		free(buff);
 	}
@@ -306,6 +289,7 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 		EEPROM.end();
 		//
 
+		syslog.logf(LOG_INFO, "New NTP-server adress was set to '%s'\n", ntpServer );
 		Serial.printf("New NTP-server adress was set to '%s'\n", ntpServer );
 
 		//get time from NTP 
@@ -315,13 +299,14 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 		struct tm timeinfo;
 		if(!getLocalTime(&timeinfo))	//try to get time from new ntp-server adress
   		{
+			syslog.log(LOG_ERR, "Failed to obtain time");
     		Serial.println("Failed to obtain time");
 			request->send(402);
     		return;
   		}
 		//
 
-		//loop back new ntp-server adress
+		//loop back new ntp-server address
 		else
 		{
 			char buff[100];
@@ -331,7 +316,7 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 		//
 	}
 
-	else if(strcmp(elements[0], "getSchedule") == 0)
+	else if(strcmp(elements[0], "getScheudule") == 0)
 	{
 		char *response = (char*)malloc(100);
 		appointment* morgens_an = scheuduler_getAppointment("morgens_an");
@@ -353,7 +338,8 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 
 		request->send(200, "text/plain", response);
 
-		Serial.printf(">> schedule send: %s\n", response);
+		syslog.log(LOG_INFO, "scheudule was requested.");
+		Serial.printf("scheudule was requested.");
 
 		free(response);
 	}
@@ -372,7 +358,7 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 		    (getMinutesFromStr(elements[3]) > getMinutesFromStr(elements[2])) &&
 			(getMinutesFromStr(elements[4]) > getMinutesFromStr(elements[3])) )
 		{
-			Serial.println("New schedule was set.");
+			
 			request->send(200);
 
 			timestamp t1, t2, t3, t4;
@@ -390,11 +376,7 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 			scheuduler_getAppointment("abends_an")->min	   = t3.minuten;
 			scheuduler_getAppointment("abends_aus")->hour  = t4.stunden;
 			scheuduler_getAppointment("abends_aus")->min   = t4.minuten;
-			
-		//	setTimestamp(&morgens_start, elements[1]);
-		//	setTimestamp(&morgens_stop,  elements[2]);
-		//	setTimestamp(&abends_start,  elements[3]);
-		//	setTimestamp(&abends_stop,   elements[4]);
+
 
 			//store timestamps to EEPROM
 			EEPROM.begin(max_mem);
@@ -407,11 +389,13 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 			EEPROM.end();
 			//
 
-			
+			syslog.log(LOG_INFO, "new scheudule was set.");
+			Serial.println("New schedule was set.");
 		}
 
 		else
 		{
+			syslog.log(LOG_ERR, "New schedule was invalid.");
 			Serial.println("New schedule was invalid.");
 			request->send(400);
 		}
@@ -421,9 +405,13 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 	}
 
 	else if(strcmp(elements[0], "reboot") == 0)
-	{
-		ESP.restart();
+	{	
 		request->send(200);
+
+		Serial.println("rebooting...");
+		syslog.log(LOG_INFO, "rebooting...");
+
+		ESP.restart();
 	}	
 
 	else if(strcmp(elements[0], "SetAPIKey") == 0)
@@ -440,14 +428,14 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 		strncpy(api_key, elements[1], API_KEY_LENGTH);
 		api_key[API_KEY_LENGTH] = 0;  //termiante string by 0
 
-		Serial.printf(">> new API-Key: |%s|\n", api_key);
-
 		EEPROM.begin(max_mem);
 		EEPROM.writeBytes(apiKey_add, api_key, API_KEY_LENGTH + 1);
 		EEPROM.end();
 
 		request->send(200, "text/plain", api_key); 
 
+		Serial.printf("new API-Key: %s\n", api_key);
+		syslog.logf(LOG_INFO, "new API-Key: %s\n", api_key);
 	}
 
 	else if(strcmp(elements[0], "SetCity") == 0)
@@ -462,13 +450,14 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 
 		sprintf(city, "%s", elements[1]);
 
-		Serial.printf(">> new City: |%s|\n", city);
-
 		EEPROM.begin(max_mem);
 		EEPROM.writeString(city_add, city);
 		EEPROM.end();
 
 		request->send(200, "text/plain", city); 
+
+		Serial.printf("new City: |%s|\n", city);
+		syslog.logf(LOG_INFO, "new City: |%s|\n", city);
 	}
 
 	else if(strcmp(elements[0], "getForecast") == 0)
@@ -477,6 +466,10 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 		sprintf(buff, "%.3f", getRainVolumeToday(api_key, city));
 
 		request->send(200, "text/plain", buff); 
+
+		Serial.printf("new weatherforecast was requested (rain today: %smm)\n", buff);
+		syslog.logf(LOG_INFO, "new weatherforecast was requested (rain today: %smm)\n", buff);
+
 		free(buff);
 	}
 
@@ -491,17 +484,19 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 			EEPROM.writeFloat(th_add, threshold);
 			EEPROM.end();
 
-			Serial.printf("threshold set to %.3f mm.\n", threshold);
-
 			char* buff = (char*)malloc(10);
 			sprintf(buff, "%.3f", threshold);
 			
 			request->send(200, "text/plain", buff);
+
+			Serial.printf("threshold set to %.3f mm.\n", threshold);
+			syslog.logf(LOG_INFO, "threshold set to %.3f mm.\n", threshold);
 		}
 
 		else
 		{
-			Serial.println("Invalid threshold");
+			Serial.println("invalid threshold was trying to set.");
+			syslog.log(LOG_ERR, "invalid threshold was trying to set.");
 			request->send(400);
 		}
 	}
@@ -511,6 +506,7 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 	else
 	{
 		Serial.println("Invalid request");
+		syslog.log(LOG_ERR, "Invalid request");
 		request->send(400);
 	}
 
@@ -535,6 +531,24 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 
 void setup()
 {
+	//WiFiManager
+    //Local intialization. Once its business is done, there is no need to keep it around 
+    AsyncWiFiManager wifiManager(&server,&dns);
+	Serial.println("Webserver initilized.");
+    
+    //fetches ssid and pass from eeprom and tries to connect
+    //if it does not connect it starts an access point with the specified name
+    //here  "AutoConnectAP"
+    //and goes into a blocking loop awaiting configuration
+    wifiManager.autoConnect("pumpe_ard");
+    //or use this for auto generated name ESP + ChipID
+    //wifiManager.autoConnect();
+	
+	//if you get here you have connected to the WiFi
+    Serial.println("connected...yeey :)");
+
+
+
 	//init GPIOs
 	GPIO_init_custom();
 	//
@@ -600,23 +614,6 @@ void setup()
 	//inti GPIOs
 	GPIO_init_custom();
 	Serial.println("GPIOs initilized.");
-
-	//WiFiManager
-    //Local intialization. Once its business is done, there is no need to keep it around 
-    AsyncWiFiManager wifiManager(&server,&dns);
-	Serial.println("Webserver initilized.");
-    
-    //fetches ssid and pass from eeprom and tries to connect
-    //if it does not connect it starts an access point with the specified name
-    //here  "AutoConnectAP"
-    //and goes into a blocking loop awaiting configuration
-    wifiManager.autoConnect("pumpe_ard");
-    //or use this for auto generated name ESP + ChipID
-    //wifiManager.autoConnect();
-	
-	//if you get here you have connected to the WiFi
-    Serial.println("connected...yeey :)");
-
 
 
 	//mounting filesystem
