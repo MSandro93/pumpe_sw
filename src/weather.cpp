@@ -20,7 +20,7 @@ bool isHere(const char* str_, int index_, const char* term_)
 
 
 
-float getRainVolumeTomorrow(const char* api_key_, const char* city_)
+float getRainVolumeToday(const char* api_key_, const char* city_)
 {
     HTTPClient http;
 	char* url = (char*)malloc(200);
@@ -37,12 +37,12 @@ float getRainVolumeTomorrow(const char* api_key_, const char* city_)
 	uint32_t ts = 0;
     float rain = 0.0f;
     time_t t;
-	uint8_t tomorrow_day = 0;
-	uint8_t tomorrow_mon = 0;
+	uint8_t today_day = 0;
+	uint8_t today_mon = 0;
 
 
 
-    //fetch forcast in JSON-format
+    //fetch forecast in JSON-format
 	sprintf(url, "http://api.openweathermap.org/data/2.5/forecast/?q=%s,de&appid=%s", city_, api_key_);
 	http.begin(url);
 
@@ -93,13 +93,10 @@ float getRainVolumeTomorrow(const char* api_key_, const char* city_)
 	//
 
 	//sum up rain of  tomorrow
-	getLocalTime(&timeinfo);  //get get current time
+	getLocalTime(&timeinfo);	
 
-	time_t tt= (time_t)((uint32_t)mktime(&timeinfo) + 86400);	//add one day. 86400 ^= one day in secounds
-	timeinfo = *localtime( &tt );  								//make struct from timestamp	
-
-	tomorrow_day = timeinfo.tm_mday;
-	tomorrow_mon = timeinfo.tm_mon + 1;
+	today_day = timeinfo.tm_mday;
+	today_mon = timeinfo.tm_mon + 1;
 
 
 	for (int ei = 0; ei < elementcnt; ei++)
@@ -109,7 +106,7 @@ float getRainVolumeTomorrow(const char* api_key_, const char* city_)
         t = (time_t)ts;
         timeinfo = *localtime(&t);
 
-        if ((timeinfo.tm_mday == tomorrow_day) && (timeinfo.tm_mon + 1 == tomorrow_mon))  //wenns morgen ist
+        if ((timeinfo.tm_mday == today_day) && (timeinfo.tm_mon + 1 == today_mon))  //wenns morgen ist
         {
             for (int i = 13; i < strlen(elemente[ei]); i++)
             {

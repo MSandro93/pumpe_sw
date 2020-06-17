@@ -4,3 +4,4 @@
 void GPIO_init_custom(void);
 void Rel_switch(uint8_t nbr_, uint8_t state_);
 void Rel_toggle(uint8_t nbr_);
+int get_pump_state(void);

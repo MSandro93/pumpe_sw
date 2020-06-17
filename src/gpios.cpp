@@ -75,3 +75,24 @@ void Rel_toggle(uint8_t nbr_)
         }
     }
 }
+
+
+int get_pump_state()
+{
+    int resp = digitalRead(rel1_pin) + digitalRead(rel2_pin);
+
+    if(resp == 0)
+    {
+        return 0;
+    }
+
+    if(resp == 2)
+    {
+        return 1;
+    }
+
+    else
+    {
+        return -1;
+    }
+}

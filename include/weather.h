@@ -1,1 +1,1 @@
-float getRainVolumeTomorrow(const char* api_key_, const char* city_);
+float getRainVolumeToday(const char* api_key_, const char* city_);

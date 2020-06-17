@@ -5,7 +5,8 @@
 #include "SPIFFS.h"
 #include <EEPROM.h>
 #include <HTTPClient.h>
-#include "log.h"
+#include "Syslog.h"
+#include <Udp.h>
 
 //needed for library
 #include <ESPAsyncWebServer.h>
@@ -18,6 +19,7 @@
 #include "gpios.h"
 #include "main.h"
 #include "weather.h"
+#include "scheduler.h"
 
 
 
@@ -50,32 +52,17 @@ char ntpServer[101] = "";
 const long  gmtOffset_sec = 3600;
 const int   daylightOffset_sec = 3600;
 
-//schedule
+
+////everything for the scheuduler
 typedef struct timestamp
 {
-	uint8_t stunden = 0;
-	uint8_t minuten = 0;
-	uint16_t inMinuten = 0;
+	int stunden = 0;
+	int minuten = 0;
+	int inMinuten = 0;
 };
 
-timestamp morgens_start;
-timestamp morgens_stop;
-timestamp abends_start;
-timestamp abends_stop;
-//
-
-//everything for the scheuduler
-bool morgen_quiet = false;
-bool abend_quiet = false;
-bool forced_on = false;
 float threshold = 0.0f;
-bool forecaste_update = false;
-uint32_t real_watering_time_today = 0;   //[sec.]
-#define one_tick_in_mills 1000
-
-
-void check_time(void);
-Ticker time_schedule(check_time, one_tick_in_mills, 0, MILLIS);
+Ticker time_schedule(scheuduler_loop, one_tick_in_mills, 0, MILLIS);
 //
 
 //everything for the weather forecaste
@@ -85,83 +72,52 @@ char city[20];
 //
 
 
+//everything for logging
+#define SYSLOG_SERVER "ftp-host"
+#define SYSLOG_PORT 514
 
-//checks if it is time to enable/disable the pump.
-void check_time()
+#define DEVICE_HOSTNAME "gartenpumpe"
+#define APP_NAME "gartenpumpe"
+
+WiFiUDP udpClient;
+Syslog syslog(udpClient, SYSLOG_SERVER, SYSLOG_PORT, DEVICE_HOSTNAME, APP_NAME, LOG_KERN);
+//
+
+
+void pump_on();
+void pump_off();
+
+
+
+
+void firstTaskOfDay()
 {
+	//reactivate all appointments for today
+	scheuduler_reactivateAll();
+
+	//get weatherforecast of today and deactivate watering-periodes, if nessaccary
+    float rain = getRainVolumeToday(api_key, city);
+
+	if(rain > threshold)
+	{
+		scheuduler_setActive("morgens_an", false);
+		scheuduler_setActive("abends_an", false);
+		scheuduler_setActive("morgens_aus", false);
+		scheuduler_setActive("abends_aus", false);
+	}
+	//
+
+	//create new logfile for today
 	tm timeinfo;
 	getLocalTime(&timeinfo);
-	uint32_t currentTime = timeinfo.tm_hour * 60 + timeinfo.tm_min;  // [min]
 
-	if(real_watering_time_today >= 2.5f * 3600)  //if too much water flew today, stop! (pump was active for 2.5 hours or more)
-	{
-		Rel_switch(1, 0);
-		return;
-	}
-
-
-	if((timeinfo.tm_hour == 23) && (timeinfo.tm_min == 58) && (!forecaste_update) )
-	{
-		if( getRainVolumeTomorrow(api_key, city) > threshold )
-		{
-			morgen_quiet = true;
-			abend_quiet = true;
-		}
-		else
-		{
-			morgen_quiet = false;
-			abend_quiet = false;
-		}
-
-		forecaste_update = true;
-	}
-
-	if((timeinfo.tm_hour == 23) && (timeinfo.tm_min == 58))
-	{
-		forecaste_update = false;
-		Serial.printf( "  >> Heute wurde %d Sekunden gegossen. <<\n", real_watering_time_today);
-		Serial.println("  >>      Gute Nacht... Zzzzz...       <<");
-		real_watering_time_today = 0; //reset time-counter
-	}
-
-
-	if((timeinfo.tm_hour == 23) && (timeinfo.tm_min == 59))
-	{
-		fclose(logfile);
-		if(log_getState() == 0)
-		{
-			sprintf(logfile_name, "%2d.%2d.%4d.log", timeinfo.tm_mday, timeinfo.tm_mon+ 1 , timeinfo.tm_year + 1900);
-
-			logfile = fopen(logfile_name, "a");
-		}
-	}
-
-
-	if( (morgens_start.inMinuten <= currentTime) && (currentTime <= morgens_stop.inMinuten) && !morgen_quiet)
-	{
-		Rel_switch(1, 1);
-		real_watering_time_today += (int)(one_tick_in_mills/1000.0f);
-	}
-
-	else if( (abends_start.inMinuten <= currentTime) && (currentTime <= abends_stop.inMinuten) && !abend_quiet)
-	{
-		Rel_switch(1, 1);
-		real_watering_time_today += (int)(one_tick_in_mills/1000.0f);
-	}
-
-	else if (forced_on)
-	{
-		Serial.println(">> forced on = true");
-		Rel_switch(1, 1);
-		real_watering_time_today += (int)(one_tick_in_mills/1000.0f);
-	}
-
-	else
-	{
-		Rel_switch(1, 0);
-	}
-	
+	fclose(logfile);
+	sprintf(logfile_name, "%02d:%02d:%04d.log", timeinfo.tm_mday, timeinfo.tm_mon+1, (timeinfo.tm_year+1900));
+	fopen(logfile_name, "a");
+	//
 }
+
+
 
 bool getValidString(uint8_t* str_, char* str_dest, int len_)
 {
@@ -203,9 +159,12 @@ void printLocalTime()
   if(!getLocalTime(&timeinfo))
   {
     Serial.println("Failed to obtain time");
+	syslog.logf(LOG_ERR, "Failed to obtain time");
     return;
   }
-  Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S");
+
+  syslog.logf(LOG_INFO, "got time froms NTP server: %02d.%02d.%04d  %02d:%02d:%02d", timeinfo.tm_mday, timeinfo.tm_mon+1, timeinfo.tm_year+1900, timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec);
+  Serial.printf("got time froms NTP server: %02d.%02d.%04d  %02d:%02d:%02d", timeinfo.tm_mday, timeinfo.tm_mon+1, timeinfo.tm_year+1900, timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec);
 }
 
 void setTimestamp(timestamp* ts_, char* str_)
@@ -293,50 +252,16 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 	{
 		request->send(200);
 
-		Serial.println("switching on relais 1");
-		Rel_switch(1, 1);
-
-		forced_on = true;
-
-		//if the pump is supposed to run at the moment, the dedicated quiet-flag shall be cleared
-		tm timeinfo;
-		getLocalTime(&timeinfo);
-		uint32_t currentTime = timeinfo.tm_hour * 60 + timeinfo.tm_min;  // [min]
-
-		if((morgens_start.inMinuten <= currentTime) && (currentTime <= morgens_stop.inMinuten))
-		{
-			morgen_quiet = false;
-		}
-		else if((abends_start.inMinuten <= currentTime) && (currentTime <= abends_stop.inMinuten))
-		{
-			abend_quiet = false;
-		}
-		//
+		Serial.println("switching on pump.");
+		pump_on();
 	}
 
 	else if(strcmp(elements[0], "pump_off") == 0)
 	{
 		request->send(200);
 
-		Serial.println("switching off relais 1");
-		Rel_switch(1, 0);
-
-		forced_on = false;
-
-		//if the pump is supposed to run at the moment, the dedicated quiet-flag shall be set
-		tm timeinfo;
-		getLocalTime(&timeinfo);
-		uint32_t currentTime = timeinfo.tm_hour * 60 + timeinfo.tm_min;  // [min]
-
-		if((morgens_start.inMinuten <= currentTime) && (currentTime <= morgens_stop.inMinuten))
-		{
-			morgen_quiet = true;
-		}
-		else if((abends_start.inMinuten <= currentTime) && (currentTime <= abends_stop.inMinuten))
-		{
-			abend_quiet = true;
-		}
-		//
+		Serial.println("switching off pump.");
+		pump_off();
 	}
 
 	else if(strcmp(elements[0], "GetServerTime") == 0)
@@ -408,24 +333,29 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 
 	else if(strcmp(elements[0], "getSchedule") == 0)
 	{
-		char response[100] = {0};
-
+		char *response = (char*)malloc(100);
+		appointment* morgens_an = scheuduler_getAppointment("morgens_an");
+		appointment* morgens_aus = scheuduler_getAppointment("morgens_aus");
+		appointment* abends_an = scheuduler_getAppointment("abends_an");
+		appointment* abends_aus = scheuduler_getAppointment("abends_aus");
 
 		sprintf(response, "%02d:%02d;%02d:%02d;%02d:%02d;%02d:%02d",
-				morgens_start.stunden,
-				morgens_start.minuten,
-				morgens_stop.stunden,
-				morgens_stop.minuten,
+				morgens_an->hour,
+				morgens_an->min,
+				morgens_aus->hour,
+				morgens_aus->min,
 
-				abends_start.stunden,
-				abends_start.minuten,
-				abends_stop.stunden,
-				abends_stop.minuten
+				abends_an->hour,
+				abends_an->min,
+				abends_aus->hour,
+				abends_aus->min
 				);
 
 		request->send(200, "text/plain", response);
 
 		Serial.printf(">> schedule send: %s\n", response);
+
+		free(response);
 	}
 	
 	else if(strcmp(elements[0], "setSchedule") == 0)
@@ -445,18 +375,34 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 			Serial.println("New schedule was set.");
 			request->send(200);
 
-			setTimestamp(&morgens_start, elements[1]);
-			setTimestamp(&morgens_stop,  elements[2]);
-			setTimestamp(&abends_start,  elements[3]);
-			setTimestamp(&abends_stop,   elements[4]);
+			timestamp t1, t2, t3, t4;
+
+			sscanf(elements[1], "%d:%d", &t1.stunden, &t1.minuten);
+			sscanf(elements[2], "%d:%d", &t2.stunden, &t2.minuten);
+			sscanf(elements[3], "%d:%d", &t3.stunden, &t3.minuten);
+			sscanf(elements[4], "%d:%d", &t4.stunden, &t4.minuten);
+
+			scheuduler_getAppointment("morgens_an")->hour  = t1.stunden;
+			scheuduler_getAppointment("morgens_an")->min   = t1.minuten;
+			scheuduler_getAppointment("morgens_aus")->hour = t2.stunden;
+			scheuduler_getAppointment("morgens_aus")->min  = t2.minuten;
+			scheuduler_getAppointment("abends_an")->hour   = t3.stunden;
+			scheuduler_getAppointment("abends_an")->min	   = t3.minuten;
+			scheuduler_getAppointment("abends_aus")->hour  = t4.stunden;
+			scheuduler_getAppointment("abends_aus")->min   = t4.minuten;
+			
+		//	setTimestamp(&morgens_start, elements[1]);
+		//	setTimestamp(&morgens_stop,  elements[2]);
+		//	setTimestamp(&abends_start,  elements[3]);
+		//	setTimestamp(&abends_stop,   elements[4]);
 
 			//store timestamps to EEPROM
 			EEPROM.begin(max_mem);
 
-			EEPROM.writeBytes(mstart_add, &morgens_start, sizeof(timestamp));
-			EEPROM.writeBytes(mstop_add, &morgens_stop, sizeof(timestamp));
-			EEPROM.writeBytes(astart_add, &abends_start, sizeof(timestamp));
-			EEPROM.writeBytes(astop_add, &abends_stop, sizeof(timestamp));
+			EEPROM.writeBytes(mstart_add, &t1, sizeof(timestamp));
+			EEPROM.writeBytes(mstop_add,  &t2, sizeof(timestamp));
+			EEPROM.writeBytes(astart_add, &t3, sizeof(timestamp));
+			EEPROM.writeBytes(astop_add,  &t4, sizeof(timestamp));
 
 			EEPROM.end();
 			//
@@ -528,7 +474,7 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 	else if(strcmp(elements[0], "getForecast") == 0)
 	{
 		char* buff = (char*)malloc(10);
-		sprintf(buff, "%.3f", getRainVolumeTomorrow(api_key, city));
+		sprintf(buff, "%.3f", getRainVolumeToday(api_key, city));
 
 		request->send(200, "text/plain", buff); 
 		free(buff);
@@ -560,21 +506,7 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 		}
 	}
 	
-	else if(strcmp(elements[0], "unmount") == 0)
-	{
-		fclose(logfile);
-		log_deinit();
-		request->send(200);
-		Serial.println("SD card unmounted.");
-	}
-
-	else if(strcmp(elements[0], "mount") == 0)
-	{
-		int tmp = log_init();
-		sprintf(body, "%d", tmp);			//just receicle this cunck of memory which is not used anymore.
-		request->send(200, "text/plain", body);
-		Serial.printf("mounting SD card -> %d.\n", tmp);
-	}
+	
 
 	else
 	{
@@ -603,9 +535,6 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 
 void setup()
 {
-	log_init();
-
-
 	//init GPIOs
 	GPIO_init_custom();
 	//
@@ -624,19 +553,31 @@ void setup()
 	
 	//
 
-	//load schedule
-	EEPROM.readBytes(mstart_add, &morgens_start, sizeof(timestamp));
+
+	//scheuduler
+	scheuduler_init();
+	timestamp ts;
+
+	EEPROM.readBytes(mstart_add, &ts, sizeof(timestamp));
 	Serial.println("loaded 'morgens_start' from EEPROM.");
+	scheuduler_addAppointment(ts.stunden, ts.minuten, &pump_on, "morgens_an");
 
-	EEPROM.readBytes(mstop_add, &morgens_stop, sizeof(timestamp));
+	EEPROM.readBytes(mstop_add, &ts, sizeof(timestamp));
 	Serial.println("loaded 'morgens_stop' from EEPROM.");
+	scheuduler_addAppointment(ts.stunden, ts.minuten, &pump_off, "morgens_aus");
 
-	EEPROM.readBytes(astart_add, &abends_start, sizeof(timestamp));
+	EEPROM.readBytes(astart_add, &ts, sizeof(timestamp));
 	Serial.println("loaded 'abends_start' from EEPROM.");
+	scheuduler_addAppointment(ts.stunden, ts.minuten, &pump_on, "abends_an");
 
-	EEPROM.readBytes(astop_add, &abends_stop, sizeof(timestamp));
+	EEPROM.readBytes(astop_add, &ts, sizeof(timestamp));
 	Serial.println("loaded 'abends_stop' from EEPROM.");
+	scheuduler_addAppointment(ts.stunden, ts.minuten, &pump_off, "abends_aus");
+
+	scheuduler_addAppointment(00, 01, &firstTaskOfDay, "erste_aufgabe_des_tages");
 	//
+
+
 
 	//load API-Key for Openweathermaps
 	EEPROM.readBytes(apiKey_add, api_key,  API_KEY_LENGTH + 1);  //+1 to get the termianting zero
@@ -677,15 +618,18 @@ void setup()
     Serial.println("connected...yeey :)");
 
 
+
 	//mounting filesystem
 	if(!SPIFFS.begin())
 	{
         Serial.println("An Error has occurred while mounting SPIFFS");
+		syslog.log(LOG_CRIT, "An Error has occurred while mounting SPIFFS");
         return;
   	}
 	else
 	{
 		Serial.println("Filesystem mounted.");
+		syslog.log(LOG_INFO, "Filesystem mounted.");
 	}
 	//
 
@@ -693,28 +637,33 @@ void setup()
 	if(!MDNS.begin("pumpe"))
 	{
      	Serial.println("Error starting mDNS");
+		syslog.log(LOG_ERR, "Error starting mDNS");
      	return;
   	}
 	else
 	{
 		Serial.println("mDNS service started.");
+		syslog.log(LOG_INFO, "mDNS service started.");
 	}
 	//
   
 	//printing device's IP
-  	Serial.println(WiFi.localIP());
+  	Serial.println(WiFi.localIP()); 
+	syslog.logf(LOG_INFO, "Got IP from DHCP");
 	//
 
 	//NTP
 	if(strcmp(ntpServer, "") != 0)
 	{
 		Serial.printf("Trying to connect to NTP server '%s'\n", ntpServer);
+		syslog.logf(LOG_INFO, "Trying to connect to NTP server '%s'\n", ntpServer);
 		configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
 	}
 	
 	else
 	{
 		Serial.println("no valid NTP server address was loaded.");
+		syslog.log(LOG_ERR, "no valid NTP server address was loaded.");
 
 		struct tm tm;
 		tm.tm_year = 0;
@@ -727,6 +676,7 @@ void setup()
     	time_t t = mktime(&tm);
 
    		printf("Setting time: %s", asctime(&tm));
+		syslog.logf(LOG_INFO, "Setting time: %s", asctime(&tm));
 
     	struct timeval now = { .tv_sec = t };
 
@@ -742,8 +692,10 @@ void setup()
 	{
     	request->send(SPIFFS, "/index.html", "text/html");
 		Serial.println("Sending requested index.html");
+		syslog.logf(LOG_INFO, "Sending requested index.html");
 	});
 
+	//invloke callback-function for handling HTTP-requests
 	server.onRequestBody(handleRequest);
 
   
@@ -788,12 +740,15 @@ void clearEEPROM()
 	EEPROM.end();
 
 	free(buff);
-	Serial.println(">> EEPROM cleared!");
+	Serial.println("EEPROM cleared!");
+	syslog.log("EEPROM cleared!");
 }
 
 
 void clear_wifi_credentials()
 {
+	syslog.log(LOG_WARNING, "clearing WIFI credentials!");
+
 	//reset saved settings
 	//wifiManager.resetSettings();
 	wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT(); //load the flash-saved configs
@@ -816,4 +771,27 @@ void clear_wifi_credentials()
 	delay(1000);
 
 	ESP.restart();
+}
+
+
+
+
+
+//callback-functions
+void pump_on()
+{	
+    Rel_switch(1, 1);
+    Rel_switch(2, 1);
+
+	Serial.println("Switching on pump!");
+	syslog.log(LOG_INFO, "Switching on pump!");
+}
+
+void pump_off()
+{
+    Rel_switch(1, 0);
+    Rel_switch(2, 0);
+
+	Serial.println("Switching off pump!");
+	syslog.log(LOG_INFO, "Switching off pump!");
 }
