@@ -230,7 +230,6 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 	//
 
 
-
 	//split request-body in it's elements
 	elements[elements_cnt] = strtok(body, ";");
 	while(elements[elements_cnt] != NULL)
