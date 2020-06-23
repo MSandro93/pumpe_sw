@@ -1,9 +1,11 @@
 #include <Arduino.h>
 #include "main.h"
 
-uint8_t butt_pin = 34;
-uint8_t rel1_pin = 32;
-uint8_t rel2_pin = 33;
+#define butt_pin 34
+#define rel1_pin 32
+#define rel2_pin 33
+#define heartbeat_pin 36 //pin 31 at main-connector
+#define WifiStatus_pin 39 //pin 32 at main-connector
 
 extern bool clear_credentials_flag;
 
@@ -23,6 +25,8 @@ void GPIO_init_custom()
     pinMode(butt_pin, INPUT);
     pinMode(rel1_pin, OUTPUT);
     pinMode(rel2_pin, OUTPUT);
+    pinMode(heartbeat_pin, OUTPUT);
+    pinMode(WifiStatus_pin, OUTPUT);
 
     //ext-interrupts
     attachInterrupt(digitalPinToInterrupt(butt_pin), but1_isr, FALLING);
@@ -95,4 +99,27 @@ int get_pump_state()
     {
         return -1;
     }
+}
+
+
+void heartbeat()
+{
+    if(digitalRead(heartbeat_pin) > 0)
+    {
+        digitalWrite(heartbeat_pin, 0);
+        Serial.println("heartbeat -> 1");
+    }
+    else
+    {
+        digitalWrite(heartbeat_pin, 1);
+        Serial.println("heartbeat -> 0");
+    }
+}
+
+
+void setWifiStatusLED(bool state_)
+{
+    digitalWrite(WifiStatus_pin, (state_ & 1));
+
+    Serial.printf("wifistate -> %d\n", state_);
 }

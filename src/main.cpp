@@ -21,7 +21,9 @@
 #include "weather.h"
 #include "scheduler.h"
 
-
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "esp_task_wdt.h"
 
 
 //memory-areas
@@ -556,10 +558,28 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 
 
 
+int flag = 1;
 
+void heartbeat_task(void *pvParameters)
+{
+	TickType_t xLastWakeTime;
+ 	const TickType_t xFrequency = 1000;
 
+     // Initialise the xLastWakeTime variable with the current time.
+     xLastWakeTime = xTaskGetTickCount();
 
+     for( ;; )
+     {
+         // Wait for the next cycle.
+         vTaskDelayUntil( &xLastWakeTime, xFrequency );
 
+         flag ^= 1;
+		 digitalWrite(36, flag);
+			Serial.printf("%d\n", flag);
+
+//		 setWifiStatusLED( WiFi.status() == WL_CONNECTED );		//indicate current Wifi-status
+     }
+}
 
 
 
@@ -569,6 +589,16 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 
 void setup()
 {
+	//init GPIOs
+	GPIO_init_custom();
+	//
+
+
+	//spawn task for heartbeat
+	TaskHandle_t heartbeat_task_Handle = NULL;
+	xTaskCreateUniversal(heartbeat_task, "heartbeat_task", 8192, NULL, 1, &heartbeat_task_Handle, CONFIG_ARDUINO_RUNNING_CORE);  
+	//
+
 	//WiFiManager
     //Local intialization. Once its business is done, there is no need to keep it around 
     AsyncWiFiManager wifiManager(&server,&dns);
@@ -585,11 +615,6 @@ void setup()
 	//if you get here you have connected to the WiFi
     Serial.println("connected...yeey :)");
 
-
-
-	//init GPIOs
-	GPIO_init_custom();
-	//
 
 	//inti serial console
 	Serial.begin(115200);
