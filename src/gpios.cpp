@@ -4,8 +4,8 @@
 #define butt_pin 34
 #define rel1_pin 32
 #define rel2_pin 33
-#define heartbeat_pin 36 //pin 31 at main-connector
-#define WifiStatus_pin 39 //pin 32 at main-connector
+#define heartbeat_pin 7 //pin 31 at main-connector
+#define WifiStatus_pin 6 //pin 32 at main-connector
 
 extern bool clear_credentials_flag;
 
