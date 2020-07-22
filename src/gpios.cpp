@@ -4,8 +4,8 @@
 #define butt_pin 34
 #define rel1_pin 32
 #define rel2_pin 33
-#define heartbeat_pin 7 //pin 31 at main-connector
-#define WifiStatus_pin 6 //pin 32 at main-connector
+#define heartbeat_pin 13 
+#define WifiStatus_pin 12 
 
 extern bool clear_credentials_flag;
 
@@ -104,22 +104,11 @@ int get_pump_state()
 
 void heartbeat()
 {
-    if(digitalRead(heartbeat_pin) > 0)
-    {
-        digitalWrite(heartbeat_pin, 0);
-        Serial.println("heartbeat -> 1");
-    }
-    else
-    {
-        digitalWrite(heartbeat_pin, 1);
-        Serial.println("heartbeat -> 0");
-    }
+    digitalWrite(heartbeat_pin, (digitalRead(heartbeat_pin) & 1) ^ 1);
 }
 
 
 void setWifiStatusLED(bool state_)
 {
     digitalWrite(WifiStatus_pin, (state_ & 1));
-
-    Serial.printf("wifistate -> %d\n", state_);
 }

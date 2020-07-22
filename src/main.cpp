@@ -565,20 +565,20 @@ void heartbeat_task(void *pvParameters)
 	TickType_t xLastWakeTime;
  	const TickType_t xFrequency = 1000;
 
+	Serial1.printf("free heap: %d", ESP.getFreeHeap());
+
      // Initialise the xLastWakeTime variable with the current time.
-     xLastWakeTime = xTaskGetTickCount();
+    xLastWakeTime = xTaskGetTickCount();
 
-     for( ;; )
-     {
-         // Wait for the next cycle.
-         vTaskDelayUntil( &xLastWakeTime, xFrequency );
+    for( ;; )
+    {
+        // Wait for the next cycle.
+        vTaskDelayUntil( &xLastWakeTime, xFrequency );
 
-         flag ^= 1;
-		 digitalWrite(36, flag);
-			Serial.printf("%d\n", flag);
+        heartbeat();
 
-//		 setWifiStatusLED( WiFi.status() == WL_CONNECTED );		//indicate current Wifi-status
-     }
+	 setWifiStatusLED( WiFi.status() == WL_CONNECTED );		//indicate current Wifi-status
+    }
 }
 
 
