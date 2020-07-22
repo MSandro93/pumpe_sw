@@ -1,7 +1,7 @@
 #include <Arduino.h>
 #include "main.h"
 
-#define butt_pin 34
+#define butt_pin 39
 #define rel1_pin 32
 #define rel2_pin 33
 #define heartbeat_pin 13 
@@ -9,6 +9,7 @@
 
 extern bool clear_credentials_flag;
 
+/*
 //ISRs
 void but1_isr(void)
 {
@@ -17,6 +18,7 @@ void but1_isr(void)
     clear_credentials_flag = true;
 }
 //
+*/
 
 
 void GPIO_init_custom()
@@ -29,8 +31,8 @@ void GPIO_init_custom()
     pinMode(WifiStatus_pin, OUTPUT);
 
     //ext-interrupts
-    attachInterrupt(digitalPinToInterrupt(butt_pin), but1_isr, FALLING);
-
+    //attachInterrupt(digitalPinToInterrupt(butt_pin), but1_isr, FALLING);
+            //is done by slow polling in heart-beat task rightnow
 }
 
 
@@ -99,6 +101,11 @@ int get_pump_state()
     {
         return -1;
     }
+}
+
+int get_erase_switch_state()
+{
+    return digitalRead(butt_pin);
 }
 
 

@@ -7,3 +7,4 @@ void Rel_toggle(uint8_t nbr_);
 int get_pump_state(void);
 void heartbeat();
 void setWifiStatusLED(bool state_);
+int get_erase_switch_state(void);

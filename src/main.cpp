@@ -185,7 +185,7 @@ void printLocalTime()
   }
 
   syslog.logf(LOG_INFO, "got time from NTP server: %02d.%02d.%04d  %02d:%02d:%02d", timeinfo.tm_mday, timeinfo.tm_mon+1, timeinfo.tm_year+1900, timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec);
-  Serial.printf("got time from NTP server: %02d.%02d.%04d  %02d:%02d:%02d", timeinfo.tm_mday, timeinfo.tm_mon+1, timeinfo.tm_year+1900, timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec);
+  Serial.printf("got time from NTP server: %02d.%02d.%04d  %02d:%02d:%02d\n", timeinfo.tm_mday, timeinfo.tm_mon+1, timeinfo.tm_year+1900, timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec);
 }
 
 
@@ -559,6 +559,7 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 
 
 int flag = 1;
+int cnt = 0;
 
 void heartbeat_task(void *pvParameters)
 {
@@ -573,11 +574,28 @@ void heartbeat_task(void *pvParameters)
     for( ;; )
     {
         // Wait for the next cycle.
-        vTaskDelayUntil( &xLastWakeTime, xFrequency );
+		vTaskDelayUntil( &xLastWakeTime, xFrequency );
 
         heartbeat();
 
-	 setWifiStatusLED( WiFi.status() == WL_CONNECTED );		//indicate current Wifi-status
+		if(get_erase_switch_state() == 0)  //button shorted pin to GND (pressed)
+		{
+			cnt++;
+		}
+		else
+		{
+			clear_credentials_flag = false;
+			cnt = 0;
+		}
+
+		if(cnt==3)
+		{
+			clear_credentials_flag = true;
+			cnt = 0;
+		}
+		
+
+	 	setWifiStatusLED( WiFi.status() == WL_CONNECTED );		//indicate current Wifi-status
     }
 }
 
@@ -593,6 +611,7 @@ void setup()
 	GPIO_init_custom();
 	//
 
+	clear_credentials_flag = false;
 
 	//spawn task for heartbeat
 	TaskHandle_t heartbeat_task_Handle = NULL;
@@ -779,6 +798,8 @@ void loop()
 
 	if(clear_credentials_flag)
 	{
+		Serial.printf("clear_credentials_flag = %d\n", clear_credentials_flag);
+
 		clearEEPROM();
 		clear_wifi_credentials();
 		clear_credentials_flag = false;
@@ -823,9 +844,6 @@ void clear_wifi_credentials()
 	{
 		Serial.println("WiFi Configurations Cleared!");
 	}
-
-
-	clearEEPROM();
 
 	//continue
 	delay(1000);
