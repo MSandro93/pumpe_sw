@@ -561,6 +561,7 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 int flag = 1;
 int cnt = 0;
 int cnt2 = 0;
+bool was_disconnected = false;
 
 void heartbeat_task(void *pvParameters)
 {
@@ -606,6 +607,13 @@ void heartbeat_task(void *pvParameters)
 		{
 			WiFi.reconnect();
 			cnt2=0;
+			was_disconnected = true;
+		}
+
+		if( (WiFi.status() == WL_CONNECTED) && was_disconnected )
+		{
+			syslog.log("reconnected");
+			was_disconnected = false;
 		}
     }
 }
