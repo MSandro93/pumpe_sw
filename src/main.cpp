@@ -560,6 +560,7 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 
 int flag = 1;
 int cnt = 0;
+int cnt2 = 0;
 
 void heartbeat_task(void *pvParameters)
 {
@@ -595,7 +596,17 @@ void heartbeat_task(void *pvParameters)
 		}
 		
 
-	 	setWifiStatusLED( WiFi.status() == WL_CONNECTED );		//indicate current Wifi-status
+		setWifiStatusLED( WiFi.status() == WL_CONNECTED );		//indicate current Wifi-status
+
+		if(WiFi.status() != WL_CONNECTED)  
+		{
+			cnt2++;
+		}
+		if(cnt2==10) //attempt to reconnect every 10s if no connection is established
+		{
+			WiFi.reconnect();
+			cnt2=0;
+		}
     }
 }
 
