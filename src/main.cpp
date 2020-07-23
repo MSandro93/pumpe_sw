@@ -549,18 +549,30 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 		}
 		//
 
+		if(getValidString((uint8_t*)elements[1], api_key, API_KEY_LENGTH + 1))
+		{
+			api_key[API_KEY_LENGTH] = 0;  //termiante string by 0
 
-		strncpy(api_key, elements[1], API_KEY_LENGTH);
-		api_key[API_KEY_LENGTH] = 0;  //termiante string by 0
+			EEPROM.begin(max_mem);
+			EEPROM.writeBytes(apiKey_add, api_key, API_KEY_LENGTH + 1);
+			EEPROM.end();
 
-		EEPROM.begin(max_mem);
-		EEPROM.writeBytes(apiKey_add, api_key, API_KEY_LENGTH + 1);
-		EEPROM.end();
+			request->send(200, "text/plain", api_key); 
+			Serial.printf("new API-Key: %s\n", api_key);
+		}
+		else
+		{
+			api_key[0] = '\0';
+			request->send(400, "text/plain", ""); 
+			Serial.println("API key was invalid.");
+		}
+		
 
-		request->send(200, "text/plain", api_key); 
+		
 
-		Serial.printf("new API-Key: %s\n", api_key);
-		syslog.logf(LOG_INFO, "new API-Key: %s\n", api_key);
+		
+
+		
 	}
 
 	else if(strcmp(elements[0], "SetCity") == 0)
@@ -771,8 +783,17 @@ void setup()
 	EEPROM.begin(max_mem);
 
 	//load ntp server address
+	Serial.print("laoding NTP server address...  ");
 	EEPROM.readBytes(ntp_add, buff, 100);
-	getValidString(buff, ntpServer, 100);
+	if(getValidString(buff, ntpServer, 100))
+	{
+		Serial.print("ok\n");
+	}
+	else
+	{
+		Serial.print("invalid\n");
+		ntpServer[0] = '\0';
+	}
 	
 	//
 
@@ -781,89 +802,117 @@ void setup()
 	scheuduler_init();
 	timestamp ts;
 
+	Serial.print("laoding appointment 'morgens_an'...  ");
 	EEPROM.readBytes(mstart_add, &ts, sizeof(timestamp));
 	if(isValidTime(ts.stunden, ts.minuten))
 	{
-		Serial.println("loaded 'morgens_start' from EEPROM.");
+		Serial.print("ok\n");
 		scheuduler_addAppointment(ts.stunden, ts.minuten, &pump_on, "morgens_an");
 	}
 	else
 	{
-		Serial.println("'morgens_start' was not in EEPROM.");
+		Serial.print("invalid\n");
 		ts.minuten = -1;
 		ts.stunden = -1;
 	}
 
+
+
+	Serial.print("laoding appointment 'morgens_aus'...  ");
 	EEPROM.readBytes(mstop_add, &ts, sizeof(timestamp));
 	if(isValidTime(ts.stunden, ts.minuten))
 	{
-		Serial.println("loaded 'morgens_stop' from EEPROM.");
+		Serial.print("ok\n");
 		scheuduler_addAppointment(ts.stunden, ts.minuten, &pump_off, "morgens_aus");
 	}
 	else
 	{
-		Serial.println("'morgens_stop' was not in EEPROM.");
+		Serial.print("invlaid\n");
 		ts.minuten = -1;
 		ts.stunden = -1;
 	}
 	
 	
 
+	Serial.print("laoding appointment 'abends_an'...  ");
 	EEPROM.readBytes(astart_add, &ts, sizeof(timestamp));
 	if(isValidTime(ts.stunden, ts.minuten))
 	{
-		Serial.println("loaded 'abends_start' from EEPROM.");
+		Serial.print("ok\n");
 		scheuduler_addAppointment(ts.stunden, ts.minuten, &pump_on, "abends_an");
 	}
 	else
 	{
-		Serial.println("'abends_start' was not in EEPROM.");
+		Serial.print("invalid\n");
 		ts.minuten = -1;
 		ts.stunden = -1;
 	}
 	
 	
-
+	Serial.print("laoding appointment 'abends_aus'...  ");
 	EEPROM.readBytes(astop_add, &ts, sizeof(timestamp));
 	if(isValidTime(ts.stunden, ts.minuten))
 	{
-		Serial.println("loaded 'abends_stop' from EEPROM.");
+		Serial.print("ok\n");
 		scheuduler_addAppointment(ts.stunden, ts.minuten, &pump_off, "abends_aus");
 	}
 	else
 	{
-		Serial.println("'abends_stop' was not in EEPROM.");
+		Serial.print("invalid\n");
 		ts.minuten = -1;
 		ts.stunden = -1;
 	}
 	
-	
-
 	scheuduler_addAppointment(00, 01, &firstTaskOfDay, "erste_aufgabe_des_tages");
 	//
 
 
 
-	//load API-Key for Openweathermaps
+	//load API-Key for openweathermaps
+	Serial.print("loading API key...  ");
 	EEPROM.readBytes(apiKey_add, buff,  API_KEY_LENGTH + 1);  //+1 to get the termianting zero
-	getValidString(buff, api_key, API_KEY_LENGTH + 1);
-	Serial.println("API Key for waether API loaded.");
+
+	Serial.printf("%s...  ", buff);
+
+	if(getValidString(buff, api_key, API_KEY_LENGTH + 1))
+	{
+		Serial.print("ok\n");
+	}
+	else
+	{
+		api_key[0] = '\0';
+		Serial.print("invalid\n");
+	}
 	//
 
+
 	//load city for Openweathermaps
+	Serial.print("loading city for weatherforecast...  ");
 	EEPROM.readBytes(city_add, buff, 20);
-	getValidString(buff, city, 20);
+
+	if(getValidString(buff, city, 20))
+	{
+		Serial.print("ok\n");
+	}
+	else
+	{
+		api_key[0] = '\0';
+		Serial.print("invalid\n");
+	}
 	//
 
 	//load threshold
+	Serial.print("loading threshold for rainfall...  ");
 	float f = EEPROM.readFloat(th_add);
 
 	if( (f>0.0f) && (f<10000.0f))
 	{
+		Serial.print("ok\n");
 		threshold = f;
 	}
 	else
 	{
+		Serial.print("invalid\n");
 		threshold = -1.0f;
 	}
 	
