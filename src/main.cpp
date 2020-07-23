@@ -63,7 +63,7 @@ struct timestamp
 	int inMinuten = 0;
 };
 
-float threshold = 0.0f;
+float threshold = -1.0f;
 Ticker time_schedule(scheuduler_loop, one_tick_in_mills, 0, MILLIS);
 //
 
@@ -174,6 +174,13 @@ bool getValidString(uint8_t* str_, char* str_dest, int len_)
 	return true;
 }
 
+
+bool isValidTime(int h_, int m_)
+{
+	return ( (h_>-1) && (h_<24) && (m_>-1) && (m_<61) );
+}
+
+
 void printLocalTime()
 {
   struct tm timeinfo;
@@ -265,6 +272,8 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 	else if(strcmp(elements[0], "GetServerTime") == 0)
 	{
 		char* buff = (char*)malloc(200);
+		char* api_key_buff = (char*)malloc(API_KEY_LENGTH + 1);
+		char* threshold_buff = (char*)malloc(10);
 		for(int i=0; i<100; i++)
 			buff[0] = 0;
 
@@ -276,8 +285,26 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 			request->send(500);
 			return;
 		}
-				
-  		sprintf(buff, "%02d:%02d:%02d  %02d.%02d.%04d;%s;%s;%s;%.3f;", timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec, timeinfo.tm_mday, timeinfo.tm_mon, (timeinfo.tm_year + 1900), ntpServer, api_key, city, threshold);
+
+		if(strlen(api_key)>0)  //if a API-Key was laoded
+		{
+			sprintf(api_key_buff, "********************************");
+		}
+		else //set to empty string
+		{
+			sprintf(api_key_buff, "");
+		}
+
+		if(threshold == -1.0f)
+		{
+			sprintf(threshold_buff, "");
+		}
+		else
+		{
+			sprintf(threshold_buff, "%.3f", threshold);
+		}
+					
+  		sprintf(buff, "%02d:%02d:%02d  %02d.%02d.%04d;%s;%s;%s;%s;", timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec, timeinfo.tm_mday, timeinfo.tm_mon, (timeinfo.tm_year + 1900), ntpServer, api_key_buff, city, threshold_buff);
 
 		request->send(200, "text/plain", buff); 
 
@@ -285,6 +312,8 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 		Serial.println("Server time was requested.");
 
 		free(buff);
+		free(api_key_buff);
+		free(threshold_buff);
 	}
 
 	else if(strcmp(elements[0], "SetNTP") == 0)
@@ -335,34 +364,75 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 
 	else if(strcmp(elements[0], "getScheudule") == 0)
 	{
+		syslog.log(LOG_INFO, "scheudule was requested.");
+		Serial.printf("scheudule was requested.\n");
+		Serial.flush();
+
 		char *response = (char*)malloc(100);
 		appointment* morgens_an = scheuduler_getAppointment("morgens_an");
 		appointment* morgens_aus = scheuduler_getAppointment("morgens_aus");
 		appointment* abends_an = scheuduler_getAppointment("abends_an");
 		appointment* abends_aus = scheuduler_getAppointment("abends_aus");
 
-		sprintf(response, "%02d:%02d;%02d:%02d;%02d:%02d;%02d:%02d",
-				morgens_an->hour,
-				morgens_an->min,
-				morgens_aus->hour,
-				morgens_aus->min,
+		char* morgens_an_buff = (char*)malloc(10);
+		char* morgens_aus_buff = (char*)malloc(10);
+		char* abends_an_buff = (char*)malloc(10);
+		char* abends_aus_buff = (char*)malloc(10);
 
-				abends_an->hour,
-				abends_an->min,
-				abends_aus->hour,
-				abends_aus->min
-				);
+
+		if((morgens_an!=nullptr) && isValidTime(morgens_an->hour, morgens_an->min))
+		{		
+			sprintf(morgens_an_buff, "%02d:%02d", morgens_an->hour, morgens_an->min);
+		}
+		else
+		{
+			morgens_an_buff[0] = '\0';
+		}
+
+		if((morgens_aus!=nullptr) && isValidTime(morgens_aus->hour, morgens_aus->min))
+		{
+			sprintf(morgens_aus_buff, "%02d:%02d", morgens_aus->hour, morgens_aus->min);
+		}
+		else
+		{
+			morgens_aus_buff[0] = '\0';
+		}
+
+		if((abends_an) && isValidTime(abends_an->hour, abends_an->min))
+		{
+			sprintf(abends_an_buff, "%02d:%02d", abends_an->hour, abends_an->min);
+		}
+		else
+		{
+			abends_an_buff[0] = '\0';
+		}
+
+		if((abends_aus) && isValidTime(abends_aus->hour, abends_aus->min))
+		{
+			sprintf(abends_aus_buff, "%02d:%02d", abends_aus->hour, abends_aus->min);
+		}
+		else
+		{
+			abends_aus_buff[0] = '\0';
+		}
+
+
+		sprintf(response, "%s;%s;%s;%s", morgens_an_buff, morgens_aus_buff, abends_an_buff, abends_aus_buff);
 
 		request->send(200, "text/plain", response);
 
-		syslog.log(LOG_INFO, "scheudule was requested.");
-		Serial.printf("scheudule was requested.");
-
 		free(response);
+
+		free(morgens_an_buff);
+		free(morgens_aus_buff);
+		free(abends_an_buff);
+		free(abends_aus_buff);
 	}
 	
 	else if(strcmp(elements[0], "setScheudule") == 0)
 	{
+		int valid = 0;
+
 		//if no new ntp server adress was send, termiante
 		if(elements_cnt<5)
 		{
@@ -385,29 +455,59 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 			sscanf(elements[3], "%d:%d", &t3.stunden, &t3.minuten);
 			sscanf(elements[4], "%d:%d", &t4.stunden, &t4.minuten);
 
-			scheuduler_getAppointment("morgens_an")->hour  = t1.stunden;
-			scheuduler_getAppointment("morgens_an")->min   = t1.minuten;
-			scheuduler_getAppointment("morgens_aus")->hour = t2.stunden;
-			scheuduler_getAppointment("morgens_aus")->min  = t2.minuten;
-			scheuduler_getAppointment("abends_an")->hour   = t3.stunden;
-			scheuduler_getAppointment("abends_an")->min	   = t3.minuten;
-			scheuduler_getAppointment("abends_aus")->hour  = t4.stunden;
-			scheuduler_getAppointment("abends_aus")->min   = t4.minuten;
-
-
-			//store timestamps to EEPROM
 			EEPROM.begin(max_mem);
 
-			EEPROM.writeBytes(mstart_add, &t1, sizeof(timestamp));
-			EEPROM.writeBytes(mstop_add,  &t2, sizeof(timestamp));
-			EEPROM.writeBytes(astart_add, &t3, sizeof(timestamp));
-			EEPROM.writeBytes(astop_add,  &t4, sizeof(timestamp));
+			if(isValidTime(t1.stunden, t1.minuten))
+			{
+				return;
+				scheuduler_getAppointment("morgens_an")->hour  = t1.stunden;	
+				scheuduler_getAppointment("morgens_an")->min   = t1.minuten;
+				EEPROM.writeBytes(mstart_add, &t1, sizeof(timestamp));
+				valid++;
+			}
+
+			if(isValidTime(t2.stunden, t2.minuten))
+			{
+				scheuduler_getAppointment("morgens_aus")->hour = t2.stunden;
+				scheuduler_getAppointment("morgens_aus")->min  = t2.minuten;
+				EEPROM.writeBytes(mstop_add,  &t2, sizeof(timestamp));
+				valid++;
+			}
+
+			if(isValidTime(t3.stunden, t3.minuten))
+			{
+				scheuduler_getAppointment("abends_an")->hour   = t3.stunden;
+				scheuduler_getAppointment("abends_an")->min	   = t3.minuten;
+				EEPROM.writeBytes(astart_add, &t3, sizeof(timestamp));
+				valid++;
+			}
+
+			if(isValidTime(t4.stunden, t4.minuten))
+			{
+				scheuduler_getAppointment("abends_aus")->hour  = t4.stunden;
+				scheuduler_getAppointment("abends_aus")->min   = t4.minuten;
+				EEPROM.writeBytes(astop_add,  &t4, sizeof(timestamp));
+				valid++;
+			}
 
 			EEPROM.end();
 			//
 
-			syslog.log(LOG_INFO, "new scheudule was set.");
-			Serial.println("New schedule was set.");
+
+			if(valid==4)
+			{
+				syslog.log(LOG_INFO, "new scheudule was set.");
+				Serial.println("New schedule was set.");
+				request->send(200);
+			}
+
+			else
+			{
+				syslog.log(LOG_ERR, "New schedule was invalid.");
+				Serial.println("New schedule was invalid.");
+				request->send(400);
+			}
+			
 		}
 
 		else
@@ -610,7 +710,7 @@ void heartbeat_task(void *pvParameters)
 			was_disconnected = true;
 		}
 
-		if( (WiFi.status() == WL_CONNECTED) && was_disconnected )
+		if( (WiFi.status() == WL_CONNECTED) && was_disconnected )  //if connection was established again after diconnect, log this to server
 		{
 			syslog.log("reconnected");
 			was_disconnected = false;
@@ -674,20 +774,62 @@ void setup()
 	timestamp ts;
 
 	EEPROM.readBytes(mstart_add, &ts, sizeof(timestamp));
-	Serial.println("loaded 'morgens_start' from EEPROM.");
-	scheuduler_addAppointment(ts.stunden, ts.minuten, &pump_on, "morgens_an");
+	if(isValidTime(ts.stunden, ts.minuten))
+	{
+		Serial.println("loaded 'morgens_start' from EEPROM.");
+		scheuduler_addAppointment(ts.stunden, ts.minuten, &pump_on, "morgens_an");
+	}
+	else
+	{
+		Serial.println("'morgens_start' was not in EEPROM.");
+		ts.minuten = -1;
+		ts.stunden = -1;
+	}
 
 	EEPROM.readBytes(mstop_add, &ts, sizeof(timestamp));
-	Serial.println("loaded 'morgens_stop' from EEPROM.");
-	scheuduler_addAppointment(ts.stunden, ts.minuten, &pump_off, "morgens_aus");
+	if(isValidTime(ts.stunden, ts.minuten))
+	{
+		Serial.println("loaded 'morgens_stop' from EEPROM.");
+		scheuduler_addAppointment(ts.stunden, ts.minuten, &pump_off, "morgens_aus");
+	}
+	else
+	{
+		Serial.println("'morgens_stop' was not in EEPROM.");
+		ts.minuten = -1;
+		ts.stunden = -1;
+	}
+	
+	
 
 	EEPROM.readBytes(astart_add, &ts, sizeof(timestamp));
-	Serial.println("loaded 'abends_start' from EEPROM.");
-	scheuduler_addAppointment(ts.stunden, ts.minuten, &pump_on, "abends_an");
+	if(isValidTime(ts.stunden, ts.minuten))
+	{
+		Serial.println("loaded 'abends_start' from EEPROM.");
+		scheuduler_addAppointment(ts.stunden, ts.minuten, &pump_on, "abends_an");
+	}
+	else
+	{
+		Serial.println("'abends_start' was not in EEPROM.");
+		ts.minuten = -1;
+		ts.stunden = -1;
+	}
+	
+	
 
 	EEPROM.readBytes(astop_add, &ts, sizeof(timestamp));
-	Serial.println("loaded 'abends_stop' from EEPROM.");
-	scheuduler_addAppointment(ts.stunden, ts.minuten, &pump_off, "abends_aus");
+	if(isValidTime(ts.stunden, ts.minuten))
+	{
+		Serial.println("loaded 'abends_stop' from EEPROM.");
+		scheuduler_addAppointment(ts.stunden, ts.minuten, &pump_off, "abends_aus");
+	}
+	else
+	{
+		Serial.println("'abends_stop' was not in EEPROM.");
+		ts.minuten = -1;
+		ts.stunden = -1;
+	}
+	
+	
 
 	scheuduler_addAppointment(00, 01, &firstTaskOfDay, "erste_aufgabe_des_tages");
 	//
@@ -695,7 +837,8 @@ void setup()
 
 
 	//load API-Key for Openweathermaps
-	EEPROM.readBytes(apiKey_add, api_key,  API_KEY_LENGTH + 1);  //+1 to get the termianting zero
+	EEPROM.readBytes(apiKey_add, buff,  API_KEY_LENGTH + 1);  //+1 to get the termianting zero
+	getValidString(buff, api_key, API_KEY_LENGTH + 1);
 	Serial.println("API Key for waether API loaded.");
 	//
 
@@ -705,7 +848,17 @@ void setup()
 	//
 
 	//load threshold
-	threshold = EEPROM.readFloat(th_add);
+	float f = EEPROM.readFloat(th_add);
+
+	if( (f>0.0f) && (f<10000.0f))
+	{
+		threshold = f;
+	}
+	else
+	{
+		threshold = -1.0f;
+	}
+	
 	//
 
 	free(buff);
