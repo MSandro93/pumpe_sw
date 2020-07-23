@@ -292,12 +292,12 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 		}
 		else //set to empty string
 		{
-			sprintf(api_key_buff, "");
+			api_key_buff[0] = '\0';
 		}
 
 		if(threshold == -1.0f)
 		{
-			sprintf(threshold_buff, "");
+			threshold_buff[0] = '\0';
 		}
 		else
 		{
@@ -429,97 +429,105 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 		free(abends_aus_buff);
 	}
 	
+
+
+
+
+
+
 	else if(strcmp(elements[0], "setScheudule") == 0)
 	{
-		int valid = 0;
+		timestamp t1, t2, t3, t4;
 
-		//if no new ntp server adress was send, termiante
-		if(elements_cnt<5)
+		if(elements_cnt == 5)
 		{
-			request->send(401);
-			return;
-		}
-		//
-
-		if( (getMinutesFromStr(elements[2]) > getMinutesFromStr(elements[1])) && 
-		    (getMinutesFromStr(elements[3]) > getMinutesFromStr(elements[2])) &&
-			(getMinutesFromStr(elements[4]) > getMinutesFromStr(elements[3])) )
-		{
-			
-			request->send(200);
-
-			timestamp t1, t2, t3, t4;
-
+			//request is composed of the correct number of parts
 			sscanf(elements[1], "%d:%d", &t1.stunden, &t1.minuten);
 			sscanf(elements[2], "%d:%d", &t2.stunden, &t2.minuten);
 			sscanf(elements[3], "%d:%d", &t3.stunden, &t3.minuten);
 			sscanf(elements[4], "%d:%d", &t4.stunden, &t4.minuten);
 
-			EEPROM.begin(max_mem);
-
-			if(isValidTime(t1.stunden, t1.minuten))
+			if(isValidTime(t1.stunden, t1.minuten) && isValidTime(t2.stunden, t2.minuten) && isValidTime(t3.stunden, t4.minuten) && isValidTime(t4.stunden, t4.minuten))
 			{
-				return;
-				scheuduler_getAppointment("morgens_an")->hour  = t1.stunden;	
-				scheuduler_getAppointment("morgens_an")->min   = t1.minuten;
-				EEPROM.writeBytes(mstart_add, &t1, sizeof(timestamp));
-				valid++;
+				//the received numbers for hours and minutes meet the right ranges. E.g. hours=[0..23] 
+				if( (getMinutesFromStr(elements[2]) > getMinutesFromStr(elements[1])) && 
+		    		(getMinutesFromStr(elements[3]) > getMinutesFromStr(elements[2])) &&
+					(getMinutesFromStr(elements[4]) > getMinutesFromStr(elements[3])) )
+				{
+					//the timestamps are logiacl correct. E.g. turning off in the mornigs shall take place AFTER turning on in the morning
+
+					//morgens an
+					appointment* app = scheuduler_getAppointment("morgens_an");
+					if(app == nullptr)   //if event 'morgens_an' is not in scheudle
+					{
+						scheuduler_addAppointment(t1.stunden, t1.minuten, pump_on, "morgens_an");  //add it to the scheudule
+					}
+					else  //otherweise date it up
+					{
+						scheuduler_getAppointment("morgens_an")->hour = t1.stunden;
+						scheuduler_getAppointment("morgens_an")->min = t1.minuten;
+					}
+
+					//morgens aus
+					app = scheuduler_getAppointment("morgens_aus");
+					if(app == nullptr)   //if event 'morgens_an' is not in scheudle
+					{
+						scheuduler_addAppointment(t2.stunden, t2.minuten, pump_off, "morgens_aus");
+					}
+					else
+					{
+						scheuduler_getAppointment("morgens_aus")->hour = t1.stunden;
+						scheuduler_getAppointment("morgens_aus")->min = t1.minuten;
+					}
+
+					//abends_an
+					app = scheuduler_getAppointment("abends_an");
+					if(app == nullptr)   //if event 'morgens_an' is not in scheudle
+					{
+						scheuduler_addAppointment(t3.stunden, t3.minuten, pump_on, "abends_an");
+					}
+					else
+					{
+						scheuduler_getAppointment("abends_an")->hour = t1.stunden;
+						scheuduler_getAppointment("abends_an")->min = t1.minuten;
+					}
+					
+					//abends_aus
+					app = scheuduler_getAppointment("abends_aus");
+					if(app == nullptr)   //if event 'morgens_an' is not in scheudle
+					{
+						scheuduler_addAppointment(t4.stunden, t4.minuten, pump_on, "abends_aus");
+					}
+					else
+					{
+						scheuduler_getAppointment("abends_aus")->hour = t1.stunden;
+						scheuduler_getAppointment("abends_aus")->min = t1.minuten;
+					}
+
+					//save new appointments to EEPROM
+					EEPROM.begin(max_mem);
+					EEPROM.writeBytes(mstart_add, &t1, sizeof(timestamp));
+					EEPROM.writeBytes(mstop_add,  &t2, sizeof(timestamp));
+					EEPROM.writeBytes(astart_add, &t3, sizeof(timestamp));
+					EEPROM.writeBytes(astop_add,  &t4, sizeof(timestamp));
+					EEPROM.end();
+
+					syslog.log(LOG_ERR, "new schedule was set.");  //log to server
+					Serial.println("new schedule was set.");	   //and concole
+					request->send(200);							   //tell it the client
+					return;										   //skip rest of routine
+				}
 			}
-
-			if(isValidTime(t2.stunden, t2.minuten))
-			{
-				scheuduler_getAppointment("morgens_aus")->hour = t2.stunden;
-				scheuduler_getAppointment("morgens_aus")->min  = t2.minuten;
-				EEPROM.writeBytes(mstop_add,  &t2, sizeof(timestamp));
-				valid++;
-			}
-
-			if(isValidTime(t3.stunden, t3.minuten))
-			{
-				scheuduler_getAppointment("abends_an")->hour   = t3.stunden;
-				scheuduler_getAppointment("abends_an")->min	   = t3.minuten;
-				EEPROM.writeBytes(astart_add, &t3, sizeof(timestamp));
-				valid++;
-			}
-
-			if(isValidTime(t4.stunden, t4.minuten))
-			{
-				scheuduler_getAppointment("abends_aus")->hour  = t4.stunden;
-				scheuduler_getAppointment("abends_aus")->min   = t4.minuten;
-				EEPROM.writeBytes(astop_add,  &t4, sizeof(timestamp));
-				valid++;
-			}
-
-			EEPROM.end();
-			//
-
-
-			if(valid==4)
-			{
-				syslog.log(LOG_INFO, "new scheudule was set.");
-				Serial.println("New schedule was set.");
-				request->send(200);
-			}
-
-			else
-			{
-				syslog.log(LOG_ERR, "New schedule was invalid.");
-				Serial.println("New schedule was invalid.");
-				request->send(400);
-			}
-			
 		}
 
-		else
-		{
-			syslog.log(LOG_ERR, "New schedule was invalid.");
-			Serial.println("New schedule was invalid.");
-			request->send(400);
-		}
-		
-		
-		
+		//only can get here if request was in wrong format or logical not correct.
+		syslog.log(LOG_ERR, "new schedule was invalid.");
+		Serial.println("new schedule was invalid.");
+		request->send(400);
 	}
+
+
+
 
 	else if(strcmp(elements[0], "reboot") == 0)
 	{	
