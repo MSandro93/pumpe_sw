@@ -148,11 +148,8 @@ bool getValidString(uint8_t* str_, char* str_dest, int len_)
 
 	for (; i < len_; i++)	//search for string termiantion
 	{
-		printf("    >> %d\n", str_[i]);
-
 		if (str_[i] == 0)
 		{
-			Serial.println("    >>found termiantion"); 
 			foundTermination = true;
 			break;
 		}
@@ -161,7 +158,6 @@ bool getValidString(uint8_t* str_, char* str_dest, int len_)
 	if (!foundTermination)	//no termiantion was found
 	{
 		str_dest[0] = '\0'; //terminate output sring
-		Serial.println("    >>exit with false");
 		return false;
 	}
 
@@ -170,7 +166,6 @@ bool getValidString(uint8_t* str_, char* str_dest, int len_)
 		if ((str_[j] < 32) || (str_[j] > 127))  //a not 'printable' char was found
 		{
 			str_dest[0] = '\n'; //terminate output string
-			Serial.println("    >>not printable char found\n");
 			return false;
 		}
 	}
@@ -714,8 +709,6 @@ void heartbeat_task(void *pvParameters)
 
         heartbeat();
 
-		printf("  >>|%s|\n", api_key);
-
 		if(get_erase_switch_state() == 0)  //button shorted pin to GND (pressed)
 		{
 			cnt++;
@@ -897,8 +890,6 @@ void setup()
 		api_key[0] = '\0';
 		Serial.print("invalid\n");
 	}
-
-	Serial.printf("<>|%s|\n", api_key);
 	//
 
 
@@ -938,8 +929,6 @@ void setup()
 	EEPROM.end();
 	////
 
-
-	Serial.printf("<>>|%s|\n", api_key);
 
 	//inti GPIOs
 	GPIO_init_custom();
@@ -1029,8 +1018,6 @@ void setup()
 	//start server
   	server.begin();
 
-
-	Serial.printf("<>>|%s|\n", api_key);
 
 	//start Ticker
 	time_schedule.start();
