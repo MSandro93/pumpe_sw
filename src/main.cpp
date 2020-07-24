@@ -145,10 +145,14 @@ bool getValidString(uint8_t* str_, char* str_dest, int len_)
 	int i = 0;
 	bool foundTermination = false;
 
+
 	for (; i < len_; i++)	//search for string termiantion
 	{
+		printf("    >> %d\n", str_[i]);
+
 		if (str_[i] == 0)
 		{
+			Serial.println("    >>found termiantion"); 
 			foundTermination = true;
 			break;
 		}
@@ -157,6 +161,7 @@ bool getValidString(uint8_t* str_, char* str_dest, int len_)
 	if (!foundTermination)	//no termiantion was found
 	{
 		str_dest[0] = '\0'; //terminate output sring
+		Serial.println("    >>exit with false");
 		return false;
 	}
 
@@ -164,12 +169,14 @@ bool getValidString(uint8_t* str_, char* str_dest, int len_)
 	{
 		if ((str_[j] < 32) || (str_[j] > 127))  //a not 'printable' char was found
 		{
-			str_dest[0] = '\n'; //terminate output sring
+			str_dest[0] = '\n'; //terminate output string
+			Serial.println("    >>not printable char found\n");
 			return false;
 		}
 	}
 
 	memcpy(str_dest, str_, i + 1); //copy valid string
+
 
 	return true;
 }
@@ -286,7 +293,10 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 			return;
 		}
 
-		if(strlen(api_key)>0)  //if a API-Key was laoded
+		Serial.printf("strlen of api_key = %d\n", strlen(api_key));
+		Serial.printf("api_key = |%s|\n",api_key);
+
+		if(strlen(api_key)>0)  //if a API-Key was loaded
 		{
 			sprintf(api_key_buff, "********************************");
 		}
@@ -551,11 +561,15 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 
 		if(getValidString((uint8_t*)elements[1], api_key, API_KEY_LENGTH + 1))
 		{
+			char* buff = (char*)malloc(100);
+
 			api_key[API_KEY_LENGTH] = 0;  //termiante string by 0
 
 			EEPROM.begin(max_mem);
 			EEPROM.writeBytes(apiKey_add, api_key, API_KEY_LENGTH + 1);
 			EEPROM.end();
+
+			free(buff);
 
 			request->send(200, "text/plain", api_key); 
 			Serial.printf("new API-Key: %s\n", api_key);
@@ -700,6 +714,8 @@ void heartbeat_task(void *pvParameters)
 
         heartbeat();
 
+		printf("  >>|%s|\n", api_key);
+
 		if(get_erase_switch_state() == 0)  //button shorted pin to GND (pressed)
 		{
 			cnt++;
@@ -783,7 +799,7 @@ void setup()
 	EEPROM.begin(max_mem);
 
 	//load ntp server address
-	Serial.print("laoding NTP server address...  ");
+	Serial.print("loading NTP server address...  ");
 	EEPROM.readBytes(ntp_add, buff, 100);
 	if(getValidString(buff, ntpServer, 100))
 	{
@@ -802,7 +818,7 @@ void setup()
 	scheuduler_init();
 	timestamp ts;
 
-	Serial.print("laoding appointment 'morgens_an'...  ");
+	Serial.print("loading appointment 'morgens_an'...  ");
 	EEPROM.readBytes(mstart_add, &ts, sizeof(timestamp));
 	if(isValidTime(ts.stunden, ts.minuten))
 	{
@@ -818,7 +834,7 @@ void setup()
 
 
 
-	Serial.print("laoding appointment 'morgens_aus'...  ");
+	Serial.print("loading appointment 'morgens_aus'...  ");
 	EEPROM.readBytes(mstop_add, &ts, sizeof(timestamp));
 	if(isValidTime(ts.stunden, ts.minuten))
 	{
@@ -834,7 +850,7 @@ void setup()
 	
 	
 
-	Serial.print("laoding appointment 'abends_an'...  ");
+	Serial.print("loading appointment 'abends_an'...  ");
 	EEPROM.readBytes(astart_add, &ts, sizeof(timestamp));
 	if(isValidTime(ts.stunden, ts.minuten))
 	{
@@ -849,7 +865,7 @@ void setup()
 	}
 	
 	
-	Serial.print("laoding appointment 'abends_aus'...  ");
+	Serial.print("loading appointment 'abends_aus'...  ");
 	EEPROM.readBytes(astop_add, &ts, sizeof(timestamp));
 	if(isValidTime(ts.stunden, ts.minuten))
 	{
@@ -872,8 +888,6 @@ void setup()
 	Serial.print("loading API key...  ");
 	EEPROM.readBytes(apiKey_add, buff,  API_KEY_LENGTH + 1);  //+1 to get the termianting zero
 
-	Serial.printf("%s...  ", buff);
-
 	if(getValidString(buff, api_key, API_KEY_LENGTH + 1))
 	{
 		Serial.print("ok\n");
@@ -883,6 +897,8 @@ void setup()
 		api_key[0] = '\0';
 		Serial.print("invalid\n");
 	}
+
+	Serial.printf("<>|%s|\n", api_key);
 	//
 
 
@@ -896,7 +912,7 @@ void setup()
 	}
 	else
 	{
-		api_key[0] = '\0';
+		city[0] = '\0';
 		Serial.print("invalid\n");
 	}
 	//
@@ -921,6 +937,9 @@ void setup()
 	free(buff);
 	EEPROM.end();
 	////
+
+
+	Serial.printf("<>>|%s|\n", api_key);
 
 	//inti GPIOs
 	GPIO_init_custom();
@@ -1010,6 +1029,8 @@ void setup()
 	//start server
   	server.begin();
 
+
+	Serial.printf("<>>|%s|\n", api_key);
 
 	//start Ticker
 	time_schedule.start();
