@@ -742,6 +742,8 @@ void heartbeat_task(void *pvParameters)
 		if( (WiFi.status() == WL_CONNECTED) && was_disconnected )  //if connection was established again after diconnect, log this to server
 		{
 			syslog.log("reconnected");
+			MDNS.end();
+			MDNS.begin("pumpe");
 			was_disconnected = false;
 		}
     }
@@ -880,6 +882,8 @@ void setup()
 	//load API-Key for openweathermaps
 	Serial.print("loading API key...  ");
 	EEPROM.readBytes(apiKey_add, buff,  API_KEY_LENGTH + 1);  //+1 to get the termianting zero
+
+	Serial.printf(" >>%s\n", buff);
 
 	if(getValidString(buff, api_key, API_KEY_LENGTH + 1))
 	{
