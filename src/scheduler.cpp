@@ -159,13 +159,13 @@ void scheuduler_loop()
 	getLocalTime(&timeinfo);
     uint32_t currentTime = timeinfo.tm_hour * 60 + timeinfo.tm_min;  // [min]
 
-
+/*
     if(real_watering_time_today >= 2.5f * 3600)  //if too much water flew today, stop! (pump was active for 2.5 hours or more)
 	{
 		Rel_switch(1, 0);
 		return;
 	}
-
+*/
     if(get_pump_state() == 1)
     {
         real_watering_time_today += (int)(one_tick_in_mills/1000.0f);

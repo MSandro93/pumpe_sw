@@ -1153,7 +1153,7 @@ void pump_on()
     Rel_switch(2, 1);
 
 	Serial.println("Switching on pump!");
-	syslog.log(LOG_INFO, "Switching on pump!");
+	syslog.log(LOG_DEBUG, "Switching on pump!");
 }
 
 void pump_off()
@@ -1162,5 +1162,5 @@ void pump_off()
     Rel_switch(2, 0);
 
 	Serial.println("Switching off pump!");
-	syslog.log(LOG_INFO, "Switching off pump!");
+	syslog.log(LOG_DEBUG, "Switching off pump!");
 }
