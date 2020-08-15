@@ -41,6 +41,7 @@ int scheuduler_addAppointment(int h_, int m_, void (*fp_)(), const char* desc_)
         appointment_list[appointment_list_cnt]->min = m_;
         appointment_list[appointment_list_cnt]->func_ptr = fp_;
         appointment_list[appointment_list_cnt]->pending_today = true;
+        appointment_list[appointment_list_cnt]->active = true;
 
         appointment_list[appointment_list_cnt]->description = (char*)malloc(strlen(desc_)+1);
         appointment_list[appointment_list_cnt]->description = strcpy(appointment_list[appointment_list_cnt]->description, desc_);
@@ -88,6 +89,7 @@ int scheuduler_overwrite(const char* desc_, int h_, int m_, void (*fp_)(), const
             appointment_list[i]->min = m_;
             appointment_list[i]->func_ptr = fp_;
             appointment_list[i]->pending_today = true;
+            appointment_list[i]-> active = true;
 
             free(appointment_list[i]->description);
             appointment_list[i]->description = (char*)malloc(strlen(desc_new) + 1);
@@ -106,7 +108,7 @@ int scheuduler_setActive(const char* desc_, bool active_)
     {
         if (strcmp(appointment_list[i]->description, desc_) == 0)
         {
-            appointment_list[i]->pending_today = active_;
+            appointment_list[i]->active = active_;
             
             if(active_)
             {
@@ -139,6 +141,18 @@ appointment* scheuduler_getAppointment(const char* desc_)
 }
 
 
+bool scheudler_getActive(const char* desc_)
+{
+    for (int i = 0; i < appointment_list_cnt; i++)
+    {
+        if (strcmp(appointment_list[i]->description, desc_) == 0)
+        {
+            return appointment_list[i]->active;
+        }
+    }
+    return false;
+}
+
 void scheuduler_loop()
 {
     tm timeinfo;
@@ -160,7 +174,7 @@ void scheuduler_loop()
 
     for (int i = 0; i < appointment_list_cnt; i++)
     {
-        if( appointment_list[i]->pending_today )
+        if( (appointment_list[i]->pending_today) && (appointment_list[i]->active) )
         {
             if(currentTime == (appointment_list[i]->hour*60 + appointment_list[i]->min))
             {
@@ -178,7 +192,7 @@ void scheuduler_reset_real_watering_time_today()
 }
 
 
-void scheuduler_reactivateAll(void)
+void scheuduler_setAllToPendingToday(void)
 {
     for (int i = 0; i < appointment_list_cnt; i++)
     {

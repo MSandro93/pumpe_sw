@@ -9,6 +9,7 @@ struct appointment
     void (*func_ptr)() = nullptr;
     bool pending_today = true;
     char* description;
+    bool active = true;
 };
 
 
@@ -17,6 +18,7 @@ int scheuduler_addAppointment(int h_, int m_, void (*fp_)(), const char* desc_);
 int scheuduler_trigger(const char* desc_);
 int scheuduler_overwrite(const char* desc_, int h_, int m_, void (*fp_)(), const char* desc_new);
 int scheuduler_setActive(const char* desc_, bool active_);
+bool scheudler_getActive(const char* desc_);
 void scheuduler_loop();
-void scheuduler_reactivateAll(void);
+void scheuduler_setAllToPendingToday(void);
 appointment* scheuduler_getAppointment(const char* desc_);

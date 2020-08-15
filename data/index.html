@@ -34,9 +34,11 @@
 
         <label>Morgens von: </label> <input type="text" name="t1_inp">
         <label>bis: </label> <input type="text" name="t2_inp">
+        <input type="checkbox" name="morning_check_box" value="">
         <p>
-          <label>Abends von: </label> <input type="text" name="t3_inp">
+        <label>Abends von: </label> <input type="text" name="t3_inp">
         <label>bis: </label> <input type="text" name="t4_inp">
+        <input type="checkbox" name="evening_check_box" value="">
         </p>
         <p>
           <button name="setScheudule" type="button">Gießzeiten festlegen</button>
@@ -181,6 +183,31 @@
         form.querySelector('input[name="threshold_input"]').value = response;
       });
 
+      form.querySelector('input[name="morning_check_box"]').addEventListener('click', async event =>
+      {
+        const state = form.querySelector('input[name="morning_check_box"]').checked;
+        if(state == false)
+        {
+          fetch(window.location.hostname + "html", { method: 'POST', body: JSON.stringify('switchAppointment;0;0') })
+        }
+        else
+        {
+          fetch(window.location.hostname + "html", { method: 'POST', body: JSON.stringify('switchAppointment;0;1') })
+        } 
+      });
+
+      form.querySelector('input[name="evening_check_box"]').addEventListener('click', async event =>
+      {
+        const state = form.querySelector('input[name="evening_check_box"]').checked;
+        if(state == false)
+        {
+          fetch(window.location.hostname + "html", { method: 'POST', body: JSON.stringify('switchAppointment;1;0') })
+        }
+        else
+        {
+          fetch(window.location.hostname + "html", { method: 'POST', body: JSON.stringify('switchAppointment;1;1') })
+        } 
+      });
 
 
 
@@ -210,6 +237,8 @@
         form.querySelector('input[name="apiKey_input"]').value = resps_time[2];
         form.querySelector('input[name="city_input"]').value = resps_time[3];
         form.querySelector('input[name="threshold_input"]').value = resps_time[4];
+        form.querySelector('input[name="morning_check_box"]').checked = resps_time[5];
+        form.querySelector('input[name="evening_check_box"]').checked = resps_time[6];
         /**/
 
         

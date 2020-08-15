@@ -94,8 +94,8 @@ void pump_off();
 
 void firstTaskOfDay()
 {
-	//reactivate all appointments for today
-	scheuduler_reactivateAll();
+	//set all appointments for today to pending
+	scheuduler_setAllToPendingToday();
 
 	//get weatherforecast of today and deactivate watering-periodes, if nessaccary
     float rain = getRainVolumeToday(api_key, city);
@@ -308,8 +308,11 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 		{
 			sprintf(threshold_buff, "%.3f", threshold);
 		}
+ 
+		int morgens_aktiv = scheudler_getActive("morgends_an") & scheudler_getActive("morgends_aus");
+		int abends_aktiv  = scheudler_getActive(  "abends_an") & scheudler_getActive("abends_aus");
 					
-  		sprintf(buff, "%02d:%02d:%02d  %02d.%02d.%04d;%s;%s;%s;%s;", timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec, timeinfo.tm_mday, timeinfo.tm_mon, (timeinfo.tm_year + 1900), ntpServer, api_key_buff, city, threshold_buff);
+  		sprintf(buff, "%02d:%02d:%02d  %02d.%02d.%04d;%s;%s;%s;%s;%d;%d", timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec, timeinfo.tm_mday, timeinfo.tm_mon, (timeinfo.tm_year + 1900), ntpServer, api_key_buff, city, threshold_buff, morgens_aktiv, abends_aktiv);
 
 		request->send(200, "text/plain", buff); 
 
@@ -670,6 +673,53 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 		}
 	}
 	
+	else if(strcmp(elements[0], "switchAppointment") == 0)
+	{
+		if(elements_cnt<3)
+		{
+			request->send(401);
+			return;
+		}
+
+		printf("    >>>>|%s|", elements[2]);
+
+		if((strcmp(elements[2], "0") != 0) && (strcmp(elements[2], "1") != 0))  //neither 0, nor 1 as state
+		{
+			request->send(402);
+			return;
+		}
+
+		if(!strcmp(elements[1], "0" ))
+		{
+			if(!strcmp(elements[2], "0"))  //morgens
+			{
+				scheuduler_setActive("morgens_an", false);
+				scheuduler_setActive("morgens_aus", false);
+			}
+			else
+			{
+				scheuduler_setActive("morgens_an", true);
+				scheuduler_setActive("morgens_aus", true);
+			}
+		}
+
+		else								//abends
+		{																											
+			if(!strcmp(elements[2], "1"))
+			{
+				scheuduler_setActive("abends_an", true);
+				scheuduler_setActive("abends_aus", true);
+			}
+
+			else
+			{
+				scheuduler_setActive("abends_an", false);
+				scheuduler_setActive("abends_aus", false);
+			}
+		}
+		
+		request->send(200);
+	}
 	
 
 	else
