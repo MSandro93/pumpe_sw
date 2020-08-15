@@ -1,2 +1,0 @@
-pool.ntp.org
-78729741ec47d063b0b960e8a91350ab
