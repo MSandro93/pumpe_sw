@@ -1,4 +1,4 @@
-- to upload through onboard USB, USB driver from OLIMEX (in folder drivers) as to be installed during eval-board is connected via USB.
+- to upload through onboard USB, USB driver from OLIMEX (in folder drivers) has to be installed during eval-board is connected via USB.
 - JTAG-Connector has to be disconnected to upload the normal way through onboard-USB.
 
 - for JTAG debugging "platform.ini" has to contain the line "debug_tool = esp-prog".
