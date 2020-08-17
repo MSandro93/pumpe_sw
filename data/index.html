@@ -22,7 +22,7 @@
         <span name="serverTime">??.??.?? ??.??.????</span>
 
         <p>
-          <label>NTP-Server: </label> <input type="text" name="nptServer" />
+          <label>NTP-Server: <input type="text" name="nptServer" /></label>
           <button name="SetNTP" type="button">NTP-Server neu setzen</button>
         </p>
       </fieldset>
@@ -30,12 +30,12 @@
       <fieldset>
         <legend>Gießplan</legend>
 
-        <label>Morgens von: </label> <input type="text" name="t1_inp" />
-        <label>bis: </label> <input type="text" name="t2_inp" />
+        <label>Morgens von: <input type="text" name="t1_inp" /></label>
+        <label>bis: <input type="text" name="t2_inp" /></label>
         <input type="checkbox" name="morning_check_box" value="" />
         <p>
-          <label>Abends von: </label> <input type="text" name="t3_inp" />
-          <label>bis: </label> <input type="text" name="t4_inp" />
+          <label>Abends von: <input type="text" name="t3_inp" /></label>
+          <label>bis: <input type="text" name="t4_inp" /></label>
           <input type="checkbox" name="evening_check_box" value="" />
         </p>
         <p>
@@ -47,27 +47,33 @@
 
       <fieldset>
         <legend>Openweathermaps</legend>
-        <label>API Key: </label>
-        <input type="text" name="apiKey_input" size="40" />
+        <label
+          >API Key: <input type="text" name="apiKey_input" size="40" />
+        </label>
         <button name="apiKey_button" type="button">API Key setzen</button>
-        <label>Stadt: </label> <input type="text" name="city_input" />
+        <label>Stadt: <input type="text" name="city_input" /> </label>
         <button name="city_button" type="button">Stadt setzen</button>
         <p>
-          <label>Niederschlag morgen (Vorhersage): </label>
-          <input type="text" name="forecast_input" />
+          <label
+            >Niederschlag morgen (Vorhersage):
+            <input type="text" name="forecast_input" />
+          </label>
+
           <button name="getForecast" type="button">hole Vorhersage</button>
         </p>
         <p>
-          <label>Schwellwert [mm]: </label>
-          <input type="text" name="threshold_input" />
+          <label
+            >Schwellwert [mm]: <input type="text" name="threshold_input" />
+          </label>
+
           <button name="threshold_button" type="button">
             Schwellwert setzen
           </button>
           <span>
             (Wenn die vorhergesagte Niederschalgsmenge über dem Schwellwert
             liegt, wird am aktuellen Tag nicht gegoßen. Die Bewertung erfolgt
-            jeden Morgen um 00:01.)</span
-          >
+            jeden Morgen um 00:01.)
+          </span>
         </p>
       </fieldset>
 
@@ -111,10 +117,10 @@
 
           const response = await getData("SetNTP;" + inputText);
 
-          const resps = response.split(";");
+          const [value, html] = response.split(";");
 
-          form.querySelector('input[name="nptServer"]').value = resps[0];
-          form.querySelector('span[name="serverTime"]').innerHTML = resps[1];
+          form.querySelector('input[name="nptServer"]').value = value;
+          form.querySelector('span[name="serverTime"]').innerHTML = html;
         });
 
       form
@@ -177,16 +183,23 @@
         .addEventListener("click", async (event) => {
           const response = await getData("getForecast;");
 
-          if (response == -1) {
-            form.querySelector('input[name="forecast_input"]').value = "";
-            alert(
-              "Wettervorhersage konnte nicht bezogen werden. API-Key falsch/abgelaufen?"
-            );
-          } else if (response == -2) {
-            form.querySelector('input[name="forecast_input"]').value = "";
-            alert("Wettervorhersage konnte nicht verarbeitet werden.");
-          } else {
-            form.querySelector('input[name="forecast_input"]').value = response;
+          switch (response) {
+            case -1:
+              form.querySelector('input[name="forecast_input"]').value = "";
+
+              alert(
+                "Wettervorhersage konnte nicht bezogen werden. API-Key falsch/abgelaufen?"
+              );
+              break;
+            case -2:
+              form.querySelector('input[name="forecast_input"]').value = "";
+
+              alert("Wettervorhersage konnte nicht verarbeitet werden.");
+              break;
+            default:
+              form.querySelector(
+                'input[name="forecast_input"]'
+              ).value = response;
           }
         });
 
@@ -206,17 +219,13 @@
         .addEventListener("click", async (event) => {
           const state = form.querySelector('input[name="morning_check_box"]')
             .checked;
-          if (state == false) {
-            fetch(window.location.hostname + "html", {
-              method: "POST",
-              body: JSON.stringify("switchAppointment;0;0"),
-            });
-          } else {
-            fetch(window.location.hostname + "html", {
-              method: "POST",
-              body: JSON.stringify("switchAppointment;0;1"),
-            });
-          }
+
+          const payload = `switchAppointment;0;${state ? 1 : 0}`;
+
+          fetch(window.location.pathname + "html", {
+            method: "POST",
+            body: JSON.stringify(payload),
+          });
         });
 
       form
@@ -224,17 +233,13 @@
         .addEventListener("click", async (event) => {
           const state = form.querySelector('input[name="evening_check_box"]')
             .checked;
-          if (state == false) {
-            fetch(window.location.hostname + "html", {
-              method: "POST",
-              body: JSON.stringify("switchAppointment;1;0"),
-            });
-          } else {
-            fetch(window.location.hostname + "html", {
-              method: "POST",
-              body: JSON.stringify("switchAppointment;1;1"),
-            });
-          }
+
+          const payload = `switchAppointment;1;${state ? 1 : 0}`;
+
+          fetch(window.location.pathname + "html", {
+            method: "POST",
+            body: JSON.stringify(payload),
+          });
         });
 
       function getTsFromStr(ts_) {
@@ -248,38 +253,43 @@
           method: "POST",
           body: JSON.stringify(req),
         });
+
         const text = await response.text();
+
         return text;
       }
 
       async function getInitalData() {
-        /*get server time*/
+        // get server time
         const response_time = await getData("GetServerTime");
 
-        const resps_time = response_time.split(";");
+        const [
+          serverTime,
+          nptServer,
+          apiKey,
+          city,
+          threshold,
+          morning,
+          evening,
+        ] = response_time.split(";");
 
-        form.querySelector('span[name="serverTime"]').innerHTML = resps_time[0];
-        form.querySelector('input[name="nptServer"]').value = resps_time[1];
-        form.querySelector('input[name="apiKey_input"]').value = resps_time[2];
-        form.querySelector('input[name="city_input"]').value = resps_time[3];
-        form.querySelector('input[name="threshold_input"]').value =
-          resps_time[4];
-        form.querySelector('input[name="morning_check_box"]').checked =
-          resps_time[5];
-        form.querySelector('input[name="evening_check_box"]').checked =
-          resps_time[6];
-        /**/
+        form.querySelector('span[name="serverTime"]').innerHTML = serverTime;
+        form.querySelector('input[name="nptServer"]').value = rnptServer;
+        form.querySelector('input[name="apiKey_input"]').value = apiKey;
+        form.querySelector('input[name="city_input"]').value = city;
+        form.querySelector('input[name="threshold_input"]').value = threshold;
+        form.querySelector('input[name="morning_check_box"]').checked = morning;
+        form.querySelector('input[name="evening_check_box"]').checked = evening;
 
         /*get current time schedule*/
         const response_sched = await getData("getScheudule");
 
-        const resps_sched = response_sched.split(";");
+        const [t1, t2, t3, t4] = response_sched.split(";");
 
-        form.querySelector('input[name="t1_inp"]').value = resps_sched[0];
-        form.querySelector('input[name="t2_inp"]').value = resps_sched[1];
-        form.querySelector('input[name="t3_inp"]').value = resps_sched[2];
-        form.querySelector('input[name="t4_inp"]').value = resps_sched[3];
-        /**/
+        form.querySelector('input[name="t1_inp"]').value = t1;
+        form.querySelector('input[name="t2_inp"]').value = t2;
+        form.querySelector('input[name="t3_inp"]').value = t3;
+        form.querySelector('input[name="t4_inp"]').value = t4;
       }
     </script>
   </body>
