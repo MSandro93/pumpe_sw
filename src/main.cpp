@@ -98,7 +98,7 @@ void firstTaskOfDay()
 	scheuduler_setAllToPendingToday();
 
 	//get weatherforecast of today and deactivate watering-periodes, if nessaccary
-    float rain = getRainVolumeToday(api_key, city);
+    float rain = getRainVolumeToday(api_key, city, &syslog);
 
 	Serial.printf("new weatherforecast was requested (rain today: %.3fmm)\n", rain);
 	syslog.logf(LOG_INFO, "new weatherforecast was requested (rain today: %.3fmm)\n", rain);
@@ -110,6 +110,11 @@ void firstTaskOfDay()
 		scheuduler_setActive("abends_an", false);
 		scheuduler_setActive("abends_aus", false);
 
+		scheuduler_setPendingToday("morgens_an", false);
+		scheuduler_setPendingToday("morgens_aus", false);
+		scheuduler_setPendingToday("abends_an", false);
+		scheuduler_setPendingToday("abends_aus", false);
+
 		printf("Rain today (%.3fmm) more than threshold (%.3fmm). -> all watering periodes for today disabled", rain, threshold);
 		syslog.logf(LOG_INFO, "Rain today (%.3fmm) more than threshold (%.3fmm). -> all watering periodes for today disabled", rain, threshold);
 	}
@@ -119,6 +124,11 @@ void firstTaskOfDay()
 		scheuduler_setActive("morgens_aus", true);
 		scheuduler_setActive("abends_an", true);
 		scheuduler_setActive("abends_aus", true);
+
+		scheuduler_setPendingToday("morgens_an", true);
+		scheuduler_setPendingToday("morgens_aus", true);
+		scheuduler_setPendingToday("abends_an", true);
+		scheuduler_setPendingToday("abends_aus", true);
 
 		printf("Rain today (%.3fmm) less than threshold (%.3fmm). -> all watering periodes stay enabled", rain, threshold);
 		syslog.logf(LOG_INFO, "Rain today (%.3fmm) more than threshold (%.3fmm). -> all watering periodes stay enabled", rain, threshold);
@@ -612,7 +622,7 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 	else if(strcmp(elements[0], "getForecast") == 0)
 	{
 		char* buff = (char*)malloc(10);
-		float rain = getRainVolumeToday(api_key, city);
+		float rain = getRainVolumeToday(api_key, city, &syslog);
 
 		sprintf(buff, "%.3f", rain);
 

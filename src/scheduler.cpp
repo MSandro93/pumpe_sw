@@ -126,6 +126,30 @@ int scheuduler_setActive(const char* desc_, bool active_)
     return -1;
 }
 
+int scheuduler_setPendingToday(const char* desc_, bool pending_)
+{
+    for (int i = 0; i < appointment_list_cnt; i++)
+    {
+        if (strcmp(appointment_list[i]->description, desc_) == 0)
+        {
+            appointment_list[i]->pending_today = pending_;
+            
+            if(pending_)
+            {
+                syslog.logf(LOG_INFO, "appointment \"%s\" was set to pending.", desc_);
+                Serial.printf("appointment \"%s\" was set to pending.\n", desc_);
+            }
+            else
+            {
+                syslog.logf(LOG_INFO, "pending of appointment \"%s\" was cleared.", desc_);
+                Serial.printf("pending of appointment \"%s\" was cleared.\n", desc_);
+            }
+            return 0;
+        }
+    }
+    return -1;
+}
+
 
 appointment* scheuduler_getAppointment(const char* desc_)
 {

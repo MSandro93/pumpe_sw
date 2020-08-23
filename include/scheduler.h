@@ -18,6 +18,7 @@ int scheuduler_addAppointment(int h_, int m_, void (*fp_)(), const char* desc_);
 int scheuduler_trigger(const char* desc_);
 int scheuduler_overwrite(const char* desc_, int h_, int m_, void (*fp_)(), const char* desc_new);
 int scheuduler_setActive(const char* desc_, bool active_);
+int scheuduler_setPendingToday(const char* desc_, bool pending_);
 bool scheudler_getActive(const char* desc_);
 void scheuduler_loop();
 void scheuduler_setAllToPendingToday(void);

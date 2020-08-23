@@ -2,6 +2,7 @@
 #include <Arduino.h>
 #include <time.h>
 #include <HTTPClient.h>
+#include <Syslog.h>
 
 
 bool isHere(const char* str_, int index_, const char* term_)
@@ -20,7 +21,7 @@ bool isHere(const char* str_, int index_, const char* term_)
 
 
 
-float getRainVolumeToday(const char* api_key_, const char* city_)
+float getRainVolumeToday(const char* api_key_, const char* city_, Syslog* sys)
 {
     HTTPClient http;
 	char* url = (char*)malloc(200);
@@ -52,10 +53,12 @@ float getRainVolumeToday(const char* api_key_, const char* city_)
 	if(  httpCode!= 200)
 	{
 		Serial.printf("Failed to fetch weather forecast: %d\n", httpCode);
+        sys->logf("Failed to fetch weather forecast: %d. API-Key:|%s|; http-code: %d", httpCode, api_key_, httpCode);
 		return -1.0f;
 	}
 
 	Serial.println("Got weather forecaste.");
+
 	
 	resp = http.getString();
 
