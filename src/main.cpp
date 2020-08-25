@@ -465,7 +465,7 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 			sscanf(elements[3], "%d:%d", &t3.stunden, &t3.minuten);
 			sscanf(elements[4], "%d:%d", &t4.stunden, &t4.minuten);
 
-			if(isValidTime(t1.stunden, t1.minuten) && isValidTime(t2.stunden, t2.minuten) && isValidTime(t3.stunden, t4.minuten) && isValidTime(t4.stunden, t4.minuten))
+			if(isValidTime(t1.stunden, t1.minuten) && isValidTime(t2.stunden, t2.minuten) && isValidTime(t3.stunden, t3.minuten) && isValidTime(t4.stunden, t4.minuten))
 			{
 				//the received numbers for hours and minutes meet the right ranges. E.g. hours=[0..23] 
 				if( (getMinutesFromStr(elements[2]) > getMinutesFromStr(elements[1])) && 
@@ -483,7 +483,7 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 					else  //otherweise date it up
 					{
 						scheuduler_getAppointment("morgens_an")->hour = t1.stunden;
-						scheuduler_getAppointment("morgens_an")->min = t1.minuten;
+						scheuduler_getAppointment("morgens_an")->min  = t1.minuten;
 					}
 
 					//morgens aus
@@ -494,8 +494,8 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 					}
 					else
 					{
-						scheuduler_getAppointment("morgens_aus")->hour = t1.stunden;
-						scheuduler_getAppointment("morgens_aus")->min = t1.minuten;
+						scheuduler_getAppointment("morgens_aus")->hour = t2.stunden;
+						scheuduler_getAppointment("morgens_aus")->min  = t2.minuten;
 					}
 
 					//abends_an
@@ -506,8 +506,8 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 					}
 					else
 					{
-						scheuduler_getAppointment("abends_an")->hour = t1.stunden;
-						scheuduler_getAppointment("abends_an")->min = t1.minuten;
+						scheuduler_getAppointment("abends_an")->hour = t3.stunden;
+						scheuduler_getAppointment("abends_an")->min  = t3.minuten;
 					}
 					
 					//abends_aus
@@ -518,8 +518,8 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 					}
 					else
 					{
-						scheuduler_getAppointment("abends_aus")->hour = t1.stunden;
-						scheuduler_getAppointment("abends_aus")->min = t1.minuten;
+						scheuduler_getAppointment("abends_aus")->hour = t4.stunden;
+						scheuduler_getAppointment("abends_aus")->min  = t4.minuten;
 					}
 
 					//save new appointments to EEPROM
@@ -530,7 +530,7 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 					EEPROM.writeBytes(astop_add,  &t4, sizeof(timestamp));
 					EEPROM.end();
 
-					syslog.log(LOG_ERR, "new schedule was set.");  //log to server
+					syslog.log(LOG_INFO, "new schedule was set.");  //log to server
 					Serial.println("new schedule was set.");	   //and concole
 					request->send(200);							   //tell it the client
 					return;										   //skip rest of routine
@@ -538,10 +538,13 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 			}
 		}
 
-		//only can get here if request was in wrong format or logical not correct.
-		syslog.log(LOG_ERR, "new schedule was invalid.");
-		Serial.println("new schedule was invalid.");
-		request->send(400);
+		else
+		{
+			//only can get here if request was in wrong format or logical not correct.
+			syslog.log(LOG_ERR, "new schedule was invalid.");
+			Serial.println("new schedule was invalid.");
+			request->send(400);
+		}
 	}
 
 
