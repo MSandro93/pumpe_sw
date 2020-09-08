@@ -54,7 +54,11 @@ float getRainVolumeToday(const char* api_key_, const char* city_, Syslog* sys)
 	{
 		Serial.printf("Failed to fetch weather forecast: %d\n", httpCode);
         sys->logf("Failed to fetch weather forecast: %d. API-Key:|%s|; http-code: %d", httpCode, api_key_, httpCode);
-        free(buff);
+
+        if(buff != nullptr)
+        {
+            free(buff);
+        }
    //     free(oldbuff);
 		return -1.0f;
 	}
