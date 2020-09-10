@@ -31,7 +31,7 @@ float getRainVolumeToday(const char* api_key_, const char* city_, Syslog* sys)
 
 	char* buff;
 	char* elemente[40];
- //	char* oldbuff;
+ 	char* oldbuff;
 	uint32_t offset;
 	int elementcnt = 0;
 
@@ -54,12 +54,6 @@ float getRainVolumeToday(const char* api_key_, const char* city_, Syslog* sys)
 	{
 		Serial.printf("Failed to fetch weather forecast: %d\n", httpCode);
         sys->logf("Failed to fetch weather forecast: %d. API-Key:|%s|; http-code: %d", httpCode, api_key_, httpCode);
-
-        if(buff != nullptr)
-        {
-            free(buff);
-        }
-   //     free(oldbuff);
 		return -1.0f;
 	}
 
@@ -77,7 +71,7 @@ float getRainVolumeToday(const char* api_key_, const char* city_, Syslog* sys)
 
 	////"parse" JSON
 	offset = (int)(strstr(buff, "\"list\":[{") - buff) + 9;
- //   oldbuff = buff;
+    oldbuff = buff;
     buff += offset;
 
 	//get all parts
@@ -132,7 +126,6 @@ float getRainVolumeToday(const char* api_key_, const char* city_, Syslog* sys)
 	////
 
 	
-//	free(oldbuff);
-    free(buff);
+	free(oldbuff);
    	return regen;
 }
