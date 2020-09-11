@@ -273,13 +273,16 @@
           evening,
         ] = response_time.split(";");
 
+        var morning_bool = (morning=="1")
+        var evening_bool = (evening=="1")
+
         form.querySelector('span[name="serverTime"]').innerHTML = serverTime;
         form.querySelector('input[name="nptServer"]').value = nptServer;
         form.querySelector('input[name="apiKey_input"]').value = apiKey;
         form.querySelector('input[name="city_input"]').value = city;
         form.querySelector('input[name="threshold_input"]').value = threshold;
-        form.querySelector('input[name="morning_check_box"]').checked = morning;
-        form.querySelector('input[name="evening_check_box"]').checked = evening;
+        form.querySelector('input[name="morning_check_box"]').checked = morning_bool;
+        form.querySelector('input[name="evening_check_box"]').checked = evening_bool;
 
         /*get current time schedule*/
         const response_sched = await getData("getScheudule");

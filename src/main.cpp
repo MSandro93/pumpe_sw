@@ -319,8 +319,8 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 			sprintf(threshold_buff, "%.3f", threshold);
 		}
  
-		int morgens_aktiv = scheudler_getActive("morgends_an") & scheudler_getActive("morgends_aus");
-		int abends_aktiv  = scheudler_getActive(  "abends_an") & scheudler_getActive("abends_aus");
+		int morgens_aktiv = scheudler_getActive("morgens_an") & scheudler_getActive("morgens_aus");
+		int abends_aktiv  = scheudler_getActive( "abends_an") & scheudler_getActive("abends_aus");
 					
   		sprintf(buff, "%02d:%02d:%02d  %02d.%02d.%04d;%s;%s;%s;%s;%d;%d", timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec, timeinfo.tm_mday, timeinfo.tm_mon, (timeinfo.tm_year + 1900), ntpServer, api_key_buff, city, threshold_buff, morgens_aktiv, abends_aktiv);
 
@@ -946,17 +946,25 @@ void setup()
 	Serial.print("loading API key...  ");
 	EEPROM.readBytes(apiKey_add, buff,  API_KEY_LENGTH + 1);  //+1 to get the termianting zero
 
-	Serial.printf(" >>%s\n", buff);
-
 	if(getValidString(buff, api_key, API_KEY_LENGTH + 1))
 	{
-		Serial.print("ok\n");
+		if(strlen(api_key) == 32)
+		{
+			Serial.print("ok");
+		}
+		else
+		{
+			Serial.print("invlaid. too short");
+		}
+		
 	}
 	else
 	{
 		api_key[0] = '\0';
-		Serial.print("invalid\n");
+		Serial.print("invalid");
 	}
+
+	Serial.printf(" ()%s\n", api_key);
 	//
 
 
