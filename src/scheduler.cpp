@@ -239,7 +239,27 @@ void scheuduler_setAllToPendingToday(void)
     }
 }
 
+void sort_appointments()
+{
+    appointment buff;
+    buff.description = (char*)malloc(100);
 
+    int end = appointment_list_cnt - 1;
+
+    while (end > 1)
+    {
+        for (int i = 0; i < end; i++)
+        {
+            if ((appointment_list[i]->hour * 60 + appointment_list[i]->min) > (appointment_list[i + 1]->hour * 60 + appointment_list[i + 1]->min)) //umsortieren
+            {
+                memcpy(&buff, appointment_list[i], sizeof(appointment));
+                memcpy(appointment_list[i], appointment_list[i + 1], sizeof(appointment));
+                memcpy(appointment_list[i + 1], &buff, sizeof(appointment));
+            }
+        }
+        end--;
+    }
+}
 
 
 
