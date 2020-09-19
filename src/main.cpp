@@ -1,7 +1,6 @@
 #include <Arduino.h>
 #include <WiFi.h>
 #include <ESPmDNS.h>
-#include <ESPAsyncWebServer.h>
 #include "SPIFFS.h"
 #include <EEPROM.h>
 #include <HTTPClient.h>
@@ -64,7 +63,7 @@ struct timestamp
 };
 
 float threshold = -1.0f;
-Ticker time_schedule(scheuduler_loop, one_tick_in_mills, 0, MILLIS);
+//Ticker time_schedule(scheuduler_loop, one_tick_in_mills, 0, MILLIS);
 //
 
 //everything for the weather forecaste
@@ -769,8 +768,6 @@ void heartbeat_task(void *pvParameters)
 	TickType_t xLastWakeTime;
  	const TickType_t xFrequency = 1000;
 
-	Serial1.printf("free heap: %d", ESP.getFreeHeap());
-
      // Initialise the xLastWakeTime variable with the current time.
     xLastWakeTime = xTaskGetTickCount();
 
@@ -780,6 +777,7 @@ void heartbeat_task(void *pvParameters)
 		vTaskDelayUntil( &xLastWakeTime, xFrequency );
 
         heartbeat();
+		scheuduler_loop();
 
 		if(get_erase_switch_state() == 0)  //button shorted pin to GND (pressed)
 		{
@@ -1088,14 +1086,20 @@ void setup()
 
   
 	//invoke index.html for website request
-  	server.on("/html", HTTP_GET, [](AsyncWebServerRequest *request)
+  	server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
 	{
     	request->send(SPIFFS, "/index.html", "text/html");
 		Serial.println("Sending requested index.html");
 		syslog.logf(LOG_INFO, "Sending requested index.html");
 	});
 
-	//invloke callback-function for handling HTTP-requests
+	//invoke icon for favicon request
+	server.on("/favicon.ico", HTTP_GET, [](AsyncWebServerRequest *request)
+	{
+    	request->send(SPIFFS, "/favicon.png", "image/png");
+	});
+
+	//invoke callback-function for handling HTTP-requests
 	server.onRequestBody(handleRequest);
 
   
@@ -1104,7 +1108,7 @@ void setup()
 
 
 	//start Ticker
-	time_schedule.start();
+	//time_schedule.start();
 
 
 
@@ -1115,7 +1119,7 @@ void setup()
 
 void loop()
 {
-	time_schedule.update();
+	//time_schedule.update();
 
 	if(clear_credentials_flag)
 	{

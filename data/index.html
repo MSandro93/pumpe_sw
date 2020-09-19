@@ -159,10 +159,11 @@
 
       form
       .querySelector('button[name="debugAppointments"]')
-      .addEventListener("click", (event) => {
+      .addEventListener("click", async(event) => {
         event.preventDefault();
 
-        alert(getData("debugAppointments"));
+        const state_text = await getData("debugAppointments");
+        alert(state_text);
       });
 
       form

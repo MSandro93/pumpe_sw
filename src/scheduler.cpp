@@ -216,9 +216,12 @@ void scheuduler_print_all_appointments(char* str)
 {
     for (int i = 0; i < appointment_list_cnt; i++)
     {
-        sprintf(str, "[%d]:\nhour=%d\nmin=%d\nfunc_ptr=%d\npending=%d\ndesc=%s\nactive=%d", i, appointment_list[i]->hour, appointment_list[i]->min, appointment_list[i]->func_ptr, appointment_list[i]->pending_today, appointment_list[i]->description, appointment_list[i]->active);
-        syslog.logf("%s", str);
+        sprintf(str+strlen(str), "[%d]:\nhour=%d\nmin=%d\nfunc_ptr=%d\npending=%d\ndesc=%s\nactive=%d\n\n", i, appointment_list[i]->hour, appointment_list[i]->min, (int)appointment_list[i]->func_ptr, appointment_list[i]->pending_today, appointment_list[i]->description, (int)appointment_list[i]->active);
     }
+
+    sprintf(str+strlen(str), "\nfreeHeap: %d\n\n", ESP.getFreeHeap());
+
+    syslog.logf("%s", str);
 }
 
 
