@@ -23,3 +23,4 @@ bool scheudler_getActive(const char* desc_);
 void scheuduler_loop();
 void scheuduler_setAllToPendingToday(void);
 appointment* scheuduler_getAppointment(const char* desc_);
+void scheuduler_print_all_appointments(char* str);

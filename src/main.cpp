@@ -733,6 +733,15 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 		
 		request->send(200);
 	}
+
+
+	else if(strcmp(elements[0], "debugAppointments") == 0)
+	{
+		char* buff = (char*) malloc(1000);
+		scheuduler_print_all_appointments(buff);
+		request->send(200, "text/plain", buff);
+		free(buff);
+	}
 	
 
 	else

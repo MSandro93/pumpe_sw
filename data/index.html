@@ -80,6 +80,7 @@
       <fieldset>
         <legend>System</legend>
         <button name="reboot" type="button">Neustart</button>
+        <button name="debugAppointments" type="button">debugAppointments</button>
       </fieldset>
     </form>
 
@@ -155,6 +156,14 @@
             body: JSON.stringify("reboot"),
           });
         });
+
+      form
+      .querySelector('button[name="debugAppointments"]')
+      .addEventListener("click", (event) => {
+        event.preventDefault();
+
+        alert(getData("debugAppointments"));
+      });
 
       form
         .querySelector('button[name="apiKey_button"]')
