@@ -544,6 +544,8 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 			Serial.println("new schedule was invalid.");
 			request->send(400);
 		}
+
+		sort_appointments();
 	}
 
 
@@ -945,6 +947,8 @@ void setup()
 	}
 	
 	scheuduler_addAppointment(00, 01, &firstTaskOfDay, "erste_aufgabe_des_tages");
+
+	sort_appointments();
 	//
 
 
