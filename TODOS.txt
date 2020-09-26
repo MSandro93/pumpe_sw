@@ -1,0 +1,2 @@
+- limit total watering time a day.
+- if appointments are changed by user, system has to react according to ne appointments. E.g. if it shall pump, according to new appointment, pmp shall be switched on immediately

@@ -25,3 +25,5 @@ void scheuduler_setAllToPendingToday(void);
 appointment* scheuduler_getAppointment(const char* desc_);
 void scheuduler_print_all_appointments(char* str);
 void sort_appointments();
+void scheuduler_reset_real_watering_time_today(void);
+uint32_t scheuduler_get_Real_Watering_Time(void)

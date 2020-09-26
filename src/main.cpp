@@ -135,7 +135,8 @@ void firstTaskOfDay()
 
 
 
-	//
+	//reset total watering time();
+	scheuduler_reset_real_watering_time_today();
 
 	//create new logfile for today
 	tm timeinfo;

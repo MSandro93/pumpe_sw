@@ -17,6 +17,7 @@ int appointment_list_cnt;
 uint32_t real_watering_time_today = 0;   //[sec.]
 
 
+
 void scheuduler_init()
 {
     appointment_list = (appointment**)malloc(sizeof(appointment*) * max_nbr_appointsments);
@@ -183,13 +184,7 @@ void scheuduler_loop()
 	getLocalTime(&timeinfo);
     uint32_t currentTime = timeinfo.tm_hour * 60 + timeinfo.tm_min;  // [min]
 
-/*
-    if(real_watering_time_today >= 2.5f * 3600)  //if too much water flew today, stop! (pump was active for 2.5 hours or more)
-	{
-		Rel_switch(1, 0);
-		return;
-	}
-*/
+
     if(get_pump_state() == 1)
     {
         real_watering_time_today += (int)(one_tick_in_mills/1000.0f);
@@ -202,7 +197,7 @@ void scheuduler_loop()
         {
             if(currentTime == (appointment_list[i]->hour*60 + appointment_list[i]->min))
             {
-                appointment_list[i]->pending_today = false;  //if this line and the following are cahnged in there order, the "erste_aufgabe_des_tages" will become immediately deactivated (today_pending=0) after it's function pointer was executed. In this function it sets all appointments to pending. But after leaving it's function, "erste_aufgabe_des_Tages" will become non-pending. So it will not be executed the next night. This will lead to all apointments stay disabled, after they were exexuted this day.
+                appointment_list[i]->pending_today = false;  //if this line and the following are changed in there order, the "erste_aufgabe_des_tages" will become immediately deactivated (today_pending=0) after it's function pointer was executed. In this function it sets all appointments to pending. But after leaving it's function, "erste_aufgabe_des_Tages" will become non-pending. So it will not be executed the next night. This will lead to all apointments stay disabled, after they were exexuted this day.
                 (*appointment_list[i]->func_ptr)();
                 syslog.logf("execute appointment: %s", appointment_list[i]->description);
                 return;
@@ -225,12 +220,6 @@ void scheuduler_print_all_appointments(char* str)
 }
 
 
-void scheuduler_reset_real_watering_time_today()
-{
-    real_watering_time_today = 0;
-}
-
-
 void scheuduler_setAllToPendingToday(void)
 {
     for (int i = 0; i < appointment_list_cnt; i++)
@@ -239,6 +228,7 @@ void scheuduler_setAllToPendingToday(void)
     }
 }
 
+//sorts appointments by their execution time
 void sort_appointments()
 {
     appointment buff;
@@ -261,6 +251,11 @@ void sort_appointments()
     }
 }
 
+
+void scheuduler_reset_real_watering_time_today()
+{
+    real_watering_time_today = 0;
+}
 
 
 
