@@ -202,8 +202,8 @@ void scheuduler_loop()
         {
             if(currentTime == (appointment_list[i]->hour*60 + appointment_list[i]->min))
             {
-                (*appointment_list[i]->func_ptr)();
                 appointment_list[i]->pending_today = false;  //if this line and the following are cahnged in there order, the "erste_aufgabe_des_tages" will become immediately deactivated (today_pending=0) after it's function pointer was executed. In this function it sets all appointments to pending. But after leaving it's function, "erste_aufgabe_des_Tages" will become non-pending. So it will not be executed the next night. This will lead to all apointments stay disabled, after they were exexuted this day.
+                (*appointment_list[i]->func_ptr)();
                 syslog.logf("execute appointment: %s", appointment_list[i]->description);
                 return;
             }
