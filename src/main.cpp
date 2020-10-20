@@ -39,6 +39,7 @@
 //
 
 
+bool pump_state = false;
 
 FILE* logfile;
 char logfile_name[15];  //name of todays logfile
@@ -750,8 +751,8 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 	{
 		char* buff = (char*) malloc(1000);
 
-		int8_t pump_state = -1;
-		int8_t flow = -1;
+		uint8_t pump_state = get_pump_state();
+		int8_t flow = get_pump_flow();
 		struct tm timeinfo;
 
 		getLocalTime(&timeinfo);  //==0 -> fehler
@@ -1216,7 +1217,16 @@ void clear_wifi_credentials()
 }
 
 
+uint8_t get_pump_state()
+{
+	return pump_state;
+}
 
+
+uint16_t get_pump_flow(uint8_t sensor_add)
+{
+	return 0;	//dummy
+}
 
 
 //callback-functions
@@ -1227,6 +1237,8 @@ void pump_on()
 
 	Serial.println("Switching on pump!");
 	syslog.log(LOG_DEBUG, "Switching on pump!");
+
+	pump_state = true;
 }
 
 void pump_off()
@@ -1236,4 +1248,6 @@ void pump_off()
 
 	Serial.println("Switching off pump!");
 	syslog.log(LOG_DEBUG, "Switching off pump!");
+
+	pump_state = false;
 }
