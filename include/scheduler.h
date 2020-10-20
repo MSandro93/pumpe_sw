@@ -1,3 +1,4 @@
+#include <stdint.h>
 
 #define max_nbr_appointsments 7
 #define one_tick_in_mills 1000

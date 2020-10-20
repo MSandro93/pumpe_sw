@@ -858,12 +858,14 @@ void setup()
     Serial.println("connected...yeey :)");
 
 
-	//inti serial console
+	//init serial console
 	Serial.begin(115200);
 
 
+
+
 	////EEPROM
-	uint8_t* buff = (uint8_t*)malloc(100);
+	uint8_t *buff = (uint8_t*)malloc(100);
 	EEPROM.begin(max_mem);
 
 	//load ntp server address
@@ -880,6 +882,22 @@ void setup()
 	}
 	
 	//
+
+	
+	//init i2C and try one read from address 0x0A
+	buff = (uint8_t*) malloc(100);
+	uint32_t readed = 0;
+
+	i2c_t *i2c = i2cInit(0, 14, 16, 120000);
+	Serial.printf("init i2c-> %d\n", i2cGetStatus(i2c));
+	i2c_err_t err = i2cRead(i2c, 0x0a, buff, 1, false, 1000, &readed);
+	Serial.printf("Readed from i2c -> %d. Received %d byte via i2c: ", err, readed);
+	while(readed > 0)
+	{
+		Serial.printf("0x%x ", buff[readed-1]);
+		readed--;
+	}
+	free(buff);
 
 
 	//scheuduler

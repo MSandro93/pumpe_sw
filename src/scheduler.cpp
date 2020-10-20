@@ -1,6 +1,6 @@
 #include <stdlib.h>
 #include "scheduler.h"
-#include <string.h>
+//#include <string.h>
 #include "time.h"
 #include <Arduino.h>
 #include "gpios.h"
