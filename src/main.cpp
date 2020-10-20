@@ -752,7 +752,7 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 		char* buff = (char*) malloc(1000);
 
 		uint8_t pump_state = get_pump_state();
-		int8_t flow = get_pump_flow();
+		int8_t flow = get_pump_flow(0x0A);
 		struct tm timeinfo;
 
 		getLocalTime(&timeinfo);  //==0 -> fehler
@@ -1214,12 +1214,6 @@ void clear_wifi_credentials()
 	delay(1000);
 
 	ESP.restart();
-}
-
-
-uint8_t get_pump_state()
-{
-	return pump_state;
 }
 
 
