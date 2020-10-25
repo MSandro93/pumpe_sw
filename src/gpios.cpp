@@ -83,6 +83,7 @@ void Rel_toggle(uint8_t nbr_)
 }
 
 
+//return: 1=on, 0 = off
 int get_pump_state()
 {
     int resp = digitalRead(rel1_pin) + digitalRead(rel2_pin);

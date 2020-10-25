@@ -14,17 +14,16 @@ struct appointment
 };
 
 
-void scheuduler_init();
-int scheuduler_addAppointment(int h_, int m_, void (*fp_)(), const char* desc_);
-int scheuduler_trigger(const char* desc_);
-int scheuduler_overwrite(const char* desc_, int h_, int m_, void (*fp_)(), const char* desc_new);
-int scheuduler_setActive(const char* desc_, bool active_);
-int scheuduler_setPendingToday(const char* desc_, bool pending_);
+void scheduler_init();
+int scheduler_addAppointment(int h_, int m_, void (*fp_)(), const char* desc_);
+int scheduler_trigger(const char* desc_);
+int scheduler_overwrite(const char* desc_, int h_, int m_, void (*fp_)(), const char* desc_new);
+int scheduler_setActive(const char* desc_, bool active_);
+int scheduler_setPendingToday(const char* desc_, bool pending_);
 bool scheudler_getActive(const char* desc_);
-void scheuduler_loop();
-void scheuduler_setAllToPendingToday(void);
-appointment* scheuduler_getAppointment(const char* desc_);
-void scheuduler_print_all_appointments(char* str);
+void scheduler_loop();
+void scheduler_setAllToPendingToday(void);
+appointment* scheduler_getAppointment(const char* desc_);
+void scheduler_print_all_appointments(char* str);
 void sort_appointments();
-void scheuduler_reset_real_watering_time_today(void);
-uint32_t scheuduler_get_Real_Watering_Time(void)
+void scheduler_reset_real_watering_time_today(void);

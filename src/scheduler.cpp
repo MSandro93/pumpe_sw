@@ -14,17 +14,16 @@ extern Syslog syslog;
 
 appointment** appointment_list = nullptr;
 int appointment_list_cnt;
-uint32_t real_watering_time_today = 0;   //[sec.]
+uint32_t real_watering_time_today = 0;
 
 
-
-void scheuduler_init()
+void scheduler_init()
 {
     appointment_list = (appointment**)malloc(sizeof(appointment*) * max_nbr_appointsments);
     appointment_list_cnt = 0;
 }
 
-int scheuduler_addAppointment(int h_, int m_, void (*fp_)(), const char* desc_)
+int scheduler_addAppointment(int h_, int m_, void (*fp_)(), const char* desc_)
 {
     if ((appointment_list_cnt + 1) > max_nbr_appointsments)
     {
@@ -57,7 +56,7 @@ int scheuduler_addAppointment(int h_, int m_, void (*fp_)(), const char* desc_)
 }
 
 
-int scheuduler_trigger(const char* desc_)
+int scheduler_trigger(const char* desc_)
 {
     for (int i = 0; i < appointment_list_cnt; i++)
     {
@@ -73,7 +72,7 @@ int scheuduler_trigger(const char* desc_)
 }
 
 
-int scheuduler_overwrite(const char* desc_, int h_, int m_, void (*fp_)(), const char* desc_new)
+int scheduler_overwrite(const char* desc_, int h_, int m_, void (*fp_)(), const char* desc_new)
 {
     if( (m_<0)||(m_>59)||(h_<0)||(h_>59))
     {
@@ -103,7 +102,7 @@ int scheuduler_overwrite(const char* desc_, int h_, int m_, void (*fp_)(), const
 }
 
 
-int scheuduler_setActive(const char* desc_, bool active_)
+int scheduler_setActive(const char* desc_, bool active_)
 {
     for (int i = 0; i < appointment_list_cnt; i++)
     {
@@ -127,7 +126,7 @@ int scheuduler_setActive(const char* desc_, bool active_)
     return -1;
 }
 
-int scheuduler_setPendingToday(const char* desc_, bool pending_)
+int scheduler_setPendingToday(const char* desc_, bool pending_)
 {
     for (int i = 0; i < appointment_list_cnt; i++)
     {
@@ -152,7 +151,7 @@ int scheuduler_setPendingToday(const char* desc_, bool pending_)
 }
 
 
-appointment* scheuduler_getAppointment(const char* desc_)
+appointment* scheduler_getAppointment(const char* desc_)
 {
     for (int i = 0; i < appointment_list_cnt; i++)
     {
@@ -178,18 +177,16 @@ bool scheudler_getActive(const char* desc_)
     return false;
 }
 
-void scheuduler_loop()
+void scheduler_loop()
 {
     tm timeinfo;
 	getLocalTime(&timeinfo);
     uint32_t currentTime = timeinfo.tm_hour * 60 + timeinfo.tm_min;  // [min]
 
-
     if(get_pump_state() == 1)
     {
-        real_watering_time_today += (int)(one_tick_in_mills/1000.0f);
+        real_watering_time_today++;
     }
-
 
     for (int i = 0; i < appointment_list_cnt; i++)
     {
@@ -207,7 +204,7 @@ void scheuduler_loop()
 }
 
 
-void scheuduler_print_all_appointments(char* str)
+void scheduler_print_all_appointments(char* str)
 {
     for (int i = 0; i < appointment_list_cnt; i++)
     {
@@ -220,7 +217,7 @@ void scheuduler_print_all_appointments(char* str)
 }
 
 
-void scheuduler_setAllToPendingToday(void)
+void scheduler_setAllToPendingToday(void)
 {
     for (int i = 0; i < appointment_list_cnt; i++)
     {
@@ -251,11 +248,16 @@ void sort_appointments()
     }
 }
 
-
-void scheuduler_reset_real_watering_time_today()
+void scheduler_reset_real_watering_time_today(void)
 {
     real_watering_time_today = 0;
 }
+
+uint32_t scheduler_get_real_watering_time_today(void)
+{
+    return real_watering_time_today;
+}
+
 
 
 

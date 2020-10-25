@@ -55,7 +55,7 @@ const long  gmtOffset_sec = 3600;
 const int   daylightOffset_sec = 3600;
 
 
-////everything for the scheuduler
+////everything for the scheduler
 struct timestamp
 {
 	int stunden = 0;
@@ -64,7 +64,7 @@ struct timestamp
 };
 
 float threshold = -1.0f;
-//Ticker time_schedule(scheuduler_loop, one_tick_in_mills, 0, MILLIS);
+//Ticker time_schedule(scheduler_loop, one_tick_in_mills, 0, MILLIS);
 //
 
 //everything for the weather forecaste
@@ -95,7 +95,7 @@ void pump_off();
 void firstTaskOfDay()
 {
 	//set all appointments for today to pending
-	scheuduler_setAllToPendingToday();
+	scheduler_setAllToPendingToday();
 
 	//get weatherforecast of today and deactivate watering-periodes, if nessaccary
     float rain = getRainVolumeToday(api_key, city, &syslog);
@@ -105,30 +105,30 @@ void firstTaskOfDay()
 
 	if(rain > threshold)
 	{
-		scheuduler_setActive("morgens_an", false);
-		scheuduler_setActive("morgens_aus", false);
-		scheuduler_setActive("abends_an", false);
-		scheuduler_setActive("abends_aus", false);
+		scheduler_setActive("morgens_an", false);
+		scheduler_setActive("morgens_aus", false);
+		scheduler_setActive("abends_an", false);
+		scheduler_setActive("abends_aus", false);
 
-		scheuduler_setPendingToday("morgens_an", false);
-		scheuduler_setPendingToday("morgens_aus", false);
-		scheuduler_setPendingToday("abends_an", false);
-		scheuduler_setPendingToday("abends_aus", false);
+		scheduler_setPendingToday("morgens_an", false);
+		scheduler_setPendingToday("morgens_aus", false);
+		scheduler_setPendingToday("abends_an", false);
+		scheduler_setPendingToday("abends_aus", false);
 
 		printf("Rain today (%.3fmm) more than threshold (%.3fmm). -> all watering periodes for today disabled", rain, threshold);
 		syslog.logf(LOG_INFO, "Rain today (%.3fmm) more than threshold (%.3fmm). -> all watering periodes for today disabled", rain, threshold);
 	}
 	else
 	{
-		scheuduler_setActive("morgens_an", true);
-		scheuduler_setActive("morgens_aus", true);
-		scheuduler_setActive("abends_an", true);
-		scheuduler_setActive("abends_aus", true);
+		scheduler_setActive("morgens_an", true);
+		scheduler_setActive("morgens_aus", true);
+		scheduler_setActive("abends_an", true);
+		scheduler_setActive("abends_aus", true);
 
-		scheuduler_setPendingToday("morgens_an", true);
-		scheuduler_setPendingToday("morgens_aus", true);
-		scheuduler_setPendingToday("abends_an", true);
-		scheuduler_setPendingToday("abends_aus", true);
+		scheduler_setPendingToday("morgens_an", true);
+		scheduler_setPendingToday("morgens_aus", true);
+		scheduler_setPendingToday("abends_an", true);
+		scheduler_setPendingToday("abends_aus", true);
 
 		printf("Rain today (%.3fmm) less than threshold (%.3fmm). -> all watering periodes stay enabled", rain, threshold);
 		syslog.logf(LOG_INFO, "Rain today (%.3fmm) more than threshold (%.3fmm). -> all watering periodes stay enabled", rain, threshold);
@@ -137,7 +137,7 @@ void firstTaskOfDay()
 
 
 	//reset total watering time();
-	scheuduler_reset_real_watering_time_today();
+	scheduler_reset_real_watering_time_today();
 
 	//create new logfile for today
 	tm timeinfo;
@@ -388,10 +388,10 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 		Serial.flush();
 
 		char *response = (char*)malloc(100);
-		appointment* morgens_an = scheuduler_getAppointment("morgens_an");
-		appointment* morgens_aus = scheuduler_getAppointment("morgens_aus");
-		appointment* abends_an = scheuduler_getAppointment("abends_an");
-		appointment* abends_aus = scheuduler_getAppointment("abends_aus");
+		appointment* morgens_an = scheduler_getAppointment("morgens_an");
+		appointment* morgens_aus = scheduler_getAppointment("morgens_aus");
+		appointment* abends_an = scheduler_getAppointment("abends_an");
+		appointment* abends_aus = scheduler_getAppointment("abends_aus");
 
 		char* morgens_an_buff = (char*)malloc(10);
 		char* morgens_aus_buff = (char*)malloc(10);
@@ -476,51 +476,51 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 					//the timestamps are logiacl correct. E.g. turning off in the mornigs shall take place AFTER turning on in the morning
 
 					//morgens an
-					appointment* app = scheuduler_getAppointment("morgens_an");
+					appointment* app = scheduler_getAppointment("morgens_an");
 					if(app == nullptr)   //if event 'morgens_an' is not in scheudle
 					{
-						scheuduler_addAppointment(t1.stunden, t1.minuten, pump_on, "morgens_an");  //add it to the scheudule
+						scheduler_addAppointment(t1.stunden, t1.minuten, pump_on, "morgens_an");  //add it to the scheudule
 					}
 					else  //otherweise date it up
 					{
-						scheuduler_getAppointment("morgens_an")->hour = t1.stunden;
-						scheuduler_getAppointment("morgens_an")->min  = t1.minuten;
+						scheduler_getAppointment("morgens_an")->hour = t1.stunden;
+						scheduler_getAppointment("morgens_an")->min  = t1.minuten;
 					}
 
 					//morgens aus
-					app = scheuduler_getAppointment("morgens_aus");
+					app = scheduler_getAppointment("morgens_aus");
 					if(app == nullptr)   //if event 'morgens_an' is not in scheudle
 					{
-						scheuduler_addAppointment(t2.stunden, t2.minuten, pump_off, "morgens_aus");
+						scheduler_addAppointment(t2.stunden, t2.minuten, pump_off, "morgens_aus");
 					}
 					else
 					{
-						scheuduler_getAppointment("morgens_aus")->hour = t2.stunden;
-						scheuduler_getAppointment("morgens_aus")->min  = t2.minuten;
+						scheduler_getAppointment("morgens_aus")->hour = t2.stunden;
+						scheduler_getAppointment("morgens_aus")->min  = t2.minuten;
 					}
 
 					//abends_an
-					app = scheuduler_getAppointment("abends_an");
+					app = scheduler_getAppointment("abends_an");
 					if(app == nullptr)   //if event 'morgens_an' is not in scheudle
 					{
-						scheuduler_addAppointment(t3.stunden, t3.minuten, pump_on, "abends_an");
+						scheduler_addAppointment(t3.stunden, t3.minuten, pump_on, "abends_an");
 					}
 					else
 					{
-						scheuduler_getAppointment("abends_an")->hour = t3.stunden;
-						scheuduler_getAppointment("abends_an")->min  = t3.minuten;
+						scheduler_getAppointment("abends_an")->hour = t3.stunden;
+						scheduler_getAppointment("abends_an")->min  = t3.minuten;
 					}
 					
 					//abends_aus
-					app = scheuduler_getAppointment("abends_aus");
+					app = scheduler_getAppointment("abends_aus");
 					if(app == nullptr)   //if event 'morgens_an' is not in scheudle
 					{
-						scheuduler_addAppointment(t4.stunden, t4.minuten, pump_on, "abends_aus");
+						scheduler_addAppointment(t4.stunden, t4.minuten, pump_on, "abends_aus");
 					}
 					else
 					{
-						scheuduler_getAppointment("abends_aus")->hour = t4.stunden;
-						scheuduler_getAppointment("abends_aus")->min  = t4.minuten;
+						scheduler_getAppointment("abends_aus")->hour = t4.stunden;
+						scheduler_getAppointment("abends_aus")->min  = t4.minuten;
 					}
 
 					//save new appointments to EEPROM
@@ -634,20 +634,20 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 
 		if(rain > threshold)
 		{
-			scheuduler_setActive("morgens_an", false);
-			scheuduler_setActive("morgens_aus", false);
-			scheuduler_setActive("abends_an", false);
-			scheuduler_setActive("abends_aus", false);
+			scheduler_setActive("morgens_an", false);
+			scheduler_setActive("morgens_aus", false);
+			scheduler_setActive("abends_an", false);
+			scheduler_setActive("abends_aus", false);
 
 			printf("Rain today (%.3fmm) more than threshold (%.3fmm). -> all watering periodes for today disabled", rain, threshold);
 			syslog.logf(LOG_INFO, "Rain today (%.3fmm) more than threshold (%.3fmm). -> all watering periodes for today disabled", rain, threshold);
 		}
 		else
 		{
-			scheuduler_setActive("morgens_an", true);
-			scheuduler_setActive("morgens_aus", true);
-			scheuduler_setActive("abends_an", true);
-			scheuduler_setActive("abends_aus", true);
+			scheduler_setActive("morgens_an", true);
+			scheduler_setActive("morgens_aus", true);
+			scheduler_setActive("abends_an", true);
+			scheduler_setActive("abends_aus", true);
 
 			printf("Rain today (%.3fmm) less than threshold (%.3fmm). -> all watering periodes stay enabled", rain, threshold);
 			syslog.logf(LOG_INFO, "Rain today (%.3fmm) less than threshold (%.3fmm). -> all watering periodes stay enabled", rain, threshold);
@@ -709,13 +709,13 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 		{
 			if(!strcmp(elements[2], "0"))  //morgens
 			{
-				scheuduler_setActive("morgens_an", false);
-				scheuduler_setActive("morgens_aus", false);
+				scheduler_setActive("morgens_an", false);
+				scheduler_setActive("morgens_aus", false);
 			}
 			else
 			{
-				scheuduler_setActive("morgens_an", true);
-				scheuduler_setActive("morgens_aus", true);
+				scheduler_setActive("morgens_an", true);
+				scheduler_setActive("morgens_aus", true);
 			}
 		}
 
@@ -723,14 +723,14 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 		{																											
 			if(!strcmp(elements[2], "1"))
 			{
-				scheuduler_setActive("abends_an", true);
-				scheuduler_setActive("abends_aus", true);
+				scheduler_setActive("abends_an", true);
+				scheduler_setActive("abends_aus", true);
 			}
 
 			else
 			{
-				scheuduler_setActive("abends_an", false);
-				scheuduler_setActive("abends_aus", false);
+				scheduler_setActive("abends_an", false);
+				scheduler_setActive("abends_aus", false);
 			}
 		}
 		
@@ -741,7 +741,7 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 	else if(strcmp(elements[0], "debugAppointments") == 0)
 	{
 		char* buff = (char*) malloc(1000);
-		scheuduler_print_all_appointments(buff);
+		scheduler_print_all_appointments(buff);
 		request->send(200, "text/plain", buff);
 		free(buff);
 	}
@@ -797,7 +797,7 @@ void heartbeat_task(void *pvParameters)
 		vTaskDelayUntil( &xLastWakeTime, xFrequency );
 
         heartbeat();
-		scheuduler_loop();
+		scheduler_loop();
 
 		if(get_erase_switch_state() == 0)  //button shorted pin to GND (pressed)
 		{
@@ -917,8 +917,8 @@ void setup()
 	free(buff);
 
 
-	//scheuduler
-	scheuduler_init();
+	//scheduler
+	scheduler_init();
 	timestamp ts;
 
 	Serial.print("loading appointment 'morgens_an'...  ");
@@ -926,7 +926,7 @@ void setup()
 	if(isValidTime(ts.stunden, ts.minuten))
 	{
 		Serial.print("ok\n");
-		scheuduler_addAppointment(ts.stunden, ts.minuten, &pump_on, "morgens_an");
+		scheduler_addAppointment(ts.stunden, ts.minuten, &pump_on, "morgens_an");
 	}
 	else
 	{
@@ -942,7 +942,7 @@ void setup()
 	if(isValidTime(ts.stunden, ts.minuten))
 	{
 		Serial.print("ok\n");
-		scheuduler_addAppointment(ts.stunden, ts.minuten, &pump_off, "morgens_aus");
+		scheduler_addAppointment(ts.stunden, ts.minuten, &pump_off, "morgens_aus");
 	}
 	else
 	{
@@ -958,7 +958,7 @@ void setup()
 	if(isValidTime(ts.stunden, ts.minuten))
 	{
 		Serial.print("ok\n");
-		scheuduler_addAppointment(ts.stunden, ts.minuten, &pump_on, "abends_an");
+		scheduler_addAppointment(ts.stunden, ts.minuten, &pump_on, "abends_an");
 	}
 	else
 	{
@@ -973,7 +973,7 @@ void setup()
 	if(isValidTime(ts.stunden, ts.minuten))
 	{
 		Serial.print("ok\n");
-		scheuduler_addAppointment(ts.stunden, ts.minuten, &pump_off, "abends_aus");
+		scheduler_addAppointment(ts.stunden, ts.minuten, &pump_off, "abends_aus");
 	}
 	else
 	{
@@ -982,7 +982,7 @@ void setup()
 		ts.stunden = -1;
 	}
 	
-	scheuduler_addAppointment(00, 01, &firstTaskOfDay, "erste_aufgabe_des_tages");
+	scheduler_addAppointment(00, 01, &firstTaskOfDay, "erste_aufgabe_des_tages");
 
 	sort_appointments();
 	//
