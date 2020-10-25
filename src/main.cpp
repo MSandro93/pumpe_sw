@@ -757,7 +757,7 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 
 		getLocalTime(&timeinfo);  //==0 -> fehler
 
-		sprintf(buff, "%02d:%02d:%02d  %02d.%02d.%04d;%d:%d", timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec, timeinfo.tm_mday, timeinfo.tm_mon, (timeinfo.tm_year + 1900), pump_state, flow);
+		sprintf(buff, "%02d:%02d:%02d  %02d.%02d.%04d;%d;%d", timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec, timeinfo.tm_mday, timeinfo.tm_mon, (timeinfo.tm_year + 1900), pump_state, flow);
 		request->send(200, "text/plain", buff);
 	}
 

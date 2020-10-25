@@ -314,14 +314,11 @@
       {
         const response_sched = await getData("update");
 
-        const [t1, t2, t3, t4, pump_state, flow] = response_sched.split(";");
+        const [serverTime, pump_state, flow] = response_sched.split(";");
 
-        form.querySelector('input[name="t1_inp"]').value = t1;
-        form.querySelector('input[name="t2_inp"]').value = t2;
-        form.querySelector('input[name="t3_inp"]').value = t3;
-        form.querySelector('input[name="t4_inp"]').value = t4;
-
+        form.querySelector('span[name="serverTime"]').innerHTML = serverTime
         form.querySelector('input[name="pump_state"]').checked = (pump_state=="1")
+        //handle flow info
       }
     </script>
   </body>
