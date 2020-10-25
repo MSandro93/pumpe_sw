@@ -902,7 +902,6 @@ void setup()
 
 	
 	//init i2C and try one read from address 0x0A
-	buff = (uint8_t*) malloc(100);
 	uint32_t readed = 0;
 
 	i2c_t *i2c = i2cInit(0, 14, 16, 120000);
@@ -914,7 +913,6 @@ void setup()
 		Serial.printf("0x%x ", buff[readed-1]);
 		readed--;
 	}
-	free(buff);
 
 
 	//scheduler
