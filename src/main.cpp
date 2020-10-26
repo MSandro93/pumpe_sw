@@ -238,8 +238,6 @@ int getMinutesFromStr(char* str_)
 	}
 }
 
-
-
 void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total)
 {
 	char* body = (char*)malloc(100);
@@ -749,7 +747,7 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 
 	else if(strcmp(elements[0], "update") == 0) 
 	{
-		char* buff = (char*) malloc(1000);
+		char* buff = (char*) malloc(100);
 
 		uint8_t pump_state = get_pump_state();
 		int8_t flow = get_pump_flow(0x0A);
@@ -759,6 +757,8 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 
 		sprintf(buff, "%02d:%02d:%02d  %02d.%02d.%04d;%d;%d", timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec, timeinfo.tm_mday, timeinfo.tm_mon, (timeinfo.tm_year + 1900), pump_state, flow);
 		request->send(200, "text/plain", buff);
+
+		free(buff);
 	}
 
 	
@@ -795,6 +795,9 @@ void heartbeat_task(void *pvParameters)
     {
         // Wait for the next cycle.
 		vTaskDelayUntil( &xLastWakeTime, xFrequency );
+
+
+		Serial.printf("%d\n", ESP.getFreeHeap());
 
         heartbeat();
 		scheduler_loop();
@@ -1138,7 +1141,10 @@ void setup()
 	});
 
 	//invoke callback-function for handling HTTP-requests
-	server.onRequestBody(handleRequest);
+	server.on("/html", HTTP_POST, [](AsyncWebServerRequest * request){}, NULL, [](AsyncWebServerRequest * request, uint8_t *data, size_t len, size_t index, size_t total)
+	{
+    	handleRequest(request, data, len, index, total);
+	});
 
   
 	//start server
