@@ -12,7 +12,6 @@
 #include <ESPAsyncWiFiManager.h>
 #include "esp_wifi.h"
 #include "time.h"
-#include "Ticker.h"
 
 //custom
 #include "gpios.h"
@@ -88,8 +87,6 @@ Syslog syslog(udpClient, SYSLOG_SERVER, SYSLOG_PORT, DEVICE_HOSTNAME, APP_NAME, 
 
 void pump_on();
 void pump_off();
-
-
 
 
 void firstTaskOfDay()
@@ -736,13 +733,23 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 	}
 
 
-	else if(strcmp(elements[0], "debugAppointments") == 0)
+	else if(strcmp(elements[0], "test1") == 0)
 	{
-		char* buff = (char*) malloc(1000);
+		char* buff = (char*) malloc(100);
 		scheduler_print_all_appointments(buff);
 		request->send(200, "text/plain", buff);
 		free(buff);
+
 	}
+
+	else if(strcmp(elements[0], "test2") == 0)
+	{
+		char* buff = (char*) malloc(100);
+
+		request->send(200, "text/plain", buff);
+		free(buff);
+	}
+
 
 
 	else if(strcmp(elements[0], "update") == 0) 
@@ -750,7 +757,7 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 		char* buff = (char*) malloc(100);
 
 		uint8_t pump_state = get_pump_state();
-		int8_t flow = get_pump_flow(0x0A);
+		int16_t flow = get_pump_flow();
 		struct tm timeinfo;
 
 		getLocalTime(&timeinfo);  //==0 -> fehler
@@ -881,6 +888,8 @@ void setup()
 	//init serial console
 	Serial.begin(115200);
 
+	Serial1.begin(4800);
+	Serial1.setTimeout(1000); //1000ms timeout
 
 
 
@@ -903,19 +912,6 @@ void setup()
 	
 	//
 
-	
-	//init i2C and try one read from address 0x0A
-	uint32_t readed = 0;
-
-	i2c_t *i2c = i2cInit(0, 14, 16, 120000);
-	Serial.printf("init i2c-> %d\n", i2cGetStatus(i2c));
-	i2c_err_t err = i2cRead(i2c, 0x0a, buff, 1, false, 1000, &readed);
-	Serial.printf("Readed from i2c -> %d. Received %d byte via i2c: ", err, readed);
-	while(readed > 0)
-	{
-		Serial.printf("0x%x ", buff[readed-1]);
-		readed--;
-	}
 
 
 	//scheduler
@@ -1221,9 +1217,20 @@ void clear_wifi_credentials()
 }
 
 
-uint16_t get_pump_flow(uint8_t sensor_add)
+uint16_t get_pump_flow()
 {
-	return 0;	//dummy
+	Serial1.write('a');
+	Serial1.flush();
+
+	int16_t ticks = -1;
+
+	do
+	{
+		ticks = Serial1.read();
+	}
+	while (ticks == -1);
+
+	return (uint16_t) ticks;
 }
 
 

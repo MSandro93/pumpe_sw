@@ -14,6 +14,7 @@
         <button name="pumpON" type="button">Pumpe an</button>
         <button name="pumpOFF" type="button">Pumpe aus</button>
         <input type="checkbox" name="pump_state" value="" />
+        <span name="flow">Durchfluss: </span>
 
       </fieldset>
 
@@ -82,7 +83,8 @@
       <fieldset>
         <legend>System</legend>
         <button name="reboot" type="button">Neustart</button>
-        <button name="debugAppointments" type="button">debugAppointments</button>
+        <button name="test1" type="button">test1</button>
+        <button name="test2" type="button">test2</button>
       </fieldset>
     </form>
 
@@ -160,11 +162,20 @@
         });
 
       form
-      .querySelector('button[name="debugAppointments"]')
+      .querySelector('button[name="test1"]')
       .addEventListener("click", async(event) => {
         event.preventDefault();
 
-        const state_text = await getData("debugAppointments");
+        const state_text = await getData("test1");
+        alert(state_text);
+      });
+
+      form
+      .querySelector('button[name="test2"]')
+      .addEventListener("click", async(event) => {
+        event.preventDefault();
+
+        const state_text = await getData("test2");
         alert(state_text);
       });
 
@@ -318,7 +329,7 @@
 
         form.querySelector('span[name="serverTime"]').innerHTML = serverTime
         form.querySelector('input[name="pump_state"]').checked = (pump_state=="1")
-        //handle flow info
+        form.querySelector('span[name="flow"]').innerHTML = "Durchfluss: " + flow
       }
     </script>
   </body>

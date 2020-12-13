@@ -1,6 +1,8 @@
 {
     "files.associations": {
         "cstdint": "cpp",
-        "functional": "cpp"
+        "functional": "cpp",
+        "bitset": "cpp",
+        "random": "cpp"
     }
 }
