@@ -6,22 +6,20 @@
 #include <HTTPClient.h>
 #include <Syslog.h>
 #include <Udp.h>
-
-//needed for library
 #include <ESPAsyncWebServer.h>
 #include <ESPAsyncWiFiManager.h>
 #include "esp_wifi.h"
 #include "time.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "esp_task_wdt.h"
+
 
 //custom
 #include "gpios.h"
 #include "main.h"
 #include "weather.h"
 #include "scheduler.h"
-
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "esp_task_wdt.h"
 
 
 //memory-areas
@@ -785,7 +783,7 @@ bool was_disconnected = false;	//inicates a running reconnection attempt to the 
 //heart beat task. Runns at a periode of 1s. Every seound it does:
 // - toggle heartbeat LED
 // - let the scheudler check if it is time for an appointment to execute
-// - checking the state of the amnesia button and erase presets and wifi credentials if it was pressed for 3 periodes in a row.
+// - checking the state of the amnesia button and sets falg for erasing presets and wifi credentials if it was pressed for 3 periodes in a row.
 // - update the wifi state led, according to the state of the wifi connection
 // - triggers a reconnection of the wifi in case of lsot connection. If the conenction could not be established after 10 periodes, a new attempt is gonna to be triggered.
 // - restarts MDNS server if a reconnection of wifi was successfull.
@@ -892,21 +890,21 @@ void setup()
 
 
 
-	////EEPROM
-	uint8_t *buff = (uint8_t*)malloc(100);
-	EEPROM.begin(max_mem);
+	////read presets from EEPROM
+	uint8_t *buff = (uint8_t*)malloc(100);				//allocate memory for reading the name of the NTP server
+	EEPROM.begin(max_mem);								//init EEPROM
 
-	//load ntp server address
-	Serial.print("loading NTP server address...  ");
-	EEPROM.readBytes(ntp_add, buff, 100);
-	if(getValidString(buff, ntpServer, 100))
+	//load ntp server name
+	Serial.print("loading NTP server address...  ");	//logging to serial console
+	EEPROM.readBytes(ntp_add, buff, 100);				//read NTP server address from EEPROM
+	if(getValidString(buff, ntpServer, 100))			//check if the readed NTP server name is a valid string. If it is valid, store it in desired buffer
 	{
 		Serial.print("ok\n");
 	}
-	else
+	else												//if no valid string was readed from EEPROM ...
 	{
 		Serial.print("invalid\n");
-		ntpServer[0] = '\0';
+		ntpServer[0] = '\0';							//set the  NTP server name to ""
 	}
 	
 	//
@@ -914,15 +912,15 @@ void setup()
 
 
 	//scheduler
-	scheduler_init();
-	timestamp ts;
+	scheduler_init();																//init der scheudler
+	timestamp ts;																	//decare a timestamp to temporary hold the timestamp of an appointment during reading all of them from EEPROM
 
 	Serial.print("loading appointment 'morgens_an'...  ");
-	EEPROM.readBytes(mstart_add, &ts, sizeof(timestamp));
-	if(isValidTime(ts.stunden, ts.minuten))
+	EEPROM.readBytes(mstart_add, &ts, sizeof(timestamp));							//read the timestamp of the "morgens_an" appointment from the EEPROM.
+	if(isValidTime(ts.stunden, ts.minuten))											//check if the readed timestamp is valid. Hours are in range [0;23]. Minutes are in range [0;59].
 	{
 		Serial.print("ok\n");
-		scheduler_addAppointment(ts.stunden, ts.minuten, &pump_on, "morgens_an");
+		scheduler_addAppointment(ts.stunden, ts.minuten, &pump_on, "morgens_an");	//if timestamp was okay, create "morgens_an" appointment with the readed timestamp.
 	}
 	else
 	{
@@ -934,11 +932,11 @@ void setup()
 
 
 	Serial.print("loading appointment 'morgens_aus'...  ");
-	EEPROM.readBytes(mstop_add, &ts, sizeof(timestamp));
-	if(isValidTime(ts.stunden, ts.minuten))
+	EEPROM.readBytes(mstop_add, &ts, sizeof(timestamp));							//read the timestamp of the "morgens_aus" appointment from the EEPROM.
+	if(isValidTime(ts.stunden, ts.minuten))											//check if the readed timestamp is valid. Hours are in range [0;23]. Minutes are in range [0;59].
 	{
 		Serial.print("ok\n");
-		scheduler_addAppointment(ts.stunden, ts.minuten, &pump_off, "morgens_aus");
+		scheduler_addAppointment(ts.stunden, ts.minuten, &pump_off, "morgens_aus");	//if timestamp was okay, create "morgens_aus" appointment with the readed timestamp.
 	}
 	else
 	{
@@ -949,12 +947,12 @@ void setup()
 	
 	
 
-	Serial.print("loading appointment 'abends_an'...  ");
-	EEPROM.readBytes(astart_add, &ts, sizeof(timestamp));
-	if(isValidTime(ts.stunden, ts.minuten))
+	Serial.print("loading appointment 'abends_an'...  ");							//read the timestamp of the "abends_an" appointment from the EEPROM.
+	EEPROM.readBytes(astart_add, &ts, sizeof(timestamp));							//check if the readed timestamp is valid. Hours are in range [0;23]. Minutes are in range [0;59].
+	if(isValidTime(ts.stunden, ts.minuten))											
 	{
 		Serial.print("ok\n");
-		scheduler_addAppointment(ts.stunden, ts.minuten, &pump_on, "abends_an");
+		scheduler_addAppointment(ts.stunden, ts.minuten, &pump_on, "abends_an");	//if timestamp was okay, create "morgens_aus" appointment with the readed timestamp.
 	}
 	else
 	{
@@ -964,12 +962,12 @@ void setup()
 	}
 	
 	
-	Serial.print("loading appointment 'abends_aus'...  ");
-	EEPROM.readBytes(astop_add, &ts, sizeof(timestamp));
+	Serial.print("loading appointment 'abends_aus'...  ");						//read the timestamp of the "abends_aus" appointment from the EEPROM.
+	EEPROM.readBytes(astop_add, &ts, sizeof(timestamp));						//check if the readed timestamp is valid. Hours are in range [0;23]. Minutes are in range [0;59].
 	if(isValidTime(ts.stunden, ts.minuten))
 	{
 		Serial.print("ok\n");
-		scheduler_addAppointment(ts.stunden, ts.minuten, &pump_off, "abends_aus");
+		scheduler_addAppointment(ts.stunden, ts.minuten, &pump_off, "abends_aus"); //if timestamp was okay, create "abends_aus" appointment with the readed timestamp.
 	}
 	else
 	{
@@ -978,20 +976,20 @@ void setup()
 		ts.stunden = -1;
 	}
 	
-	scheduler_addAppointment(00, 01, &firstTaskOfDay, "erste_aufgabe_des_tages");
+	scheduler_addAppointment(00, 01, &firstTaskOfDay, "erste_aufgabe_des_tages");	//add appointment for the first task of the day,
 
-	sort_appointments();
+	sort_appointments();															//sort appointments by timestamp
 	//
 
 
 
 	//load API-Key for openweathermaps
 	Serial.print("loading API key...  ");
-	EEPROM.readBytes(apiKey_add, buff,  API_KEY_LENGTH + 1);  //+1 to get the termianting zero
+	EEPROM.readBytes(apiKey_add, buff,  API_KEY_LENGTH + 1);  	//load the API key from the EEPROM. +1 to get the termianting zero
 
-	if(getValidString(buff, api_key, API_KEY_LENGTH + 1))
+	if(getValidString(buff, api_key, API_KEY_LENGTH + 1))		//check if a valid string was readed from EEPROM.
 	{
-		if(strlen(api_key) == 32)
+		if(strlen(api_key) == 32)								//check if the readed string has the correct length..
 		{
 			Serial.print("ok");
 		}
@@ -1003,7 +1001,7 @@ void setup()
 	}
 	else
 	{
-		api_key[0] = '\0';
+		api_key[0] = '\0';										//if not set it to ""
 		Serial.print("invalid");
 	}
 
@@ -1011,40 +1009,40 @@ void setup()
 	//
 
 
-	//load city for Openweathermaps
+	//load city for openweathermaps
 	Serial.print("loading city for weatherforecast...  ");
-	EEPROM.readBytes(city_add, buff, 20);
+	EEPROM.readBytes(city_add, buff, 20);						//reading city for weatherforecast from EEPROM
 
-	if(getValidString(buff, city, 20))
+	if(getValidString(buff, city, 20))							//check if a valid city name was readed from EEPROM ..
 	{
 		Serial.print("ok\n");
 	}
 	else
 	{
-		city[0] = '\0';
+		city[0] = '\0';											//else set it to ""
 		Serial.print("invalid\n");
 	}
 	//
 
 	//load threshold
 	Serial.print("loading threshold for rainfall...  ");
-	float f = EEPROM.readFloat(th_add);
+	float f = EEPROM.readFloat(th_add);							//load threshold for watering from EEPROM. If the predicted rain is above the threshold, the watering periodes are going to be disabled by "the first task of the day".
 
-	if( (f>0.0f) && (f<10000.0f))
+	if( (f>0.0f) && (f<10000.0f))								//check if the readed threshold is in a plausible range ...
 	{
 		Serial.print("ok\n");
 		threshold = f;
 	}
-	else
+	else														
 	{
 		Serial.print("invalid\n");
-		threshold = -1.0f;
+		threshold = -1.0f;										//if not set it to -1. So the nonvalid readback can be detected later.
 	}
 	
 	//
 
-	free(buff);
-	EEPROM.end();
+	free(buff);													//free buffer again
+	EEPROM.end();												//deinit EEPROM
 	////
 
 
@@ -1053,7 +1051,7 @@ void setup()
 	Serial.println("GPIOs initilized.");
 
 
-	//mounting filesystem
+	//mount filesystem
 	if(!SPIFFS.begin())
 	{
         Serial.println("An Error has occurred while mounting SPIFFS");
@@ -1067,7 +1065,7 @@ void setup()
 	}
 	//
 
-	//starting mDNS service
+	//start mDNS service
 	if(!MDNS.begin("pumpe"))
 	{
      	Serial.println("Error starting mDNS");
@@ -1081,20 +1079,20 @@ void setup()
 	}
 	//
   
-	//printing device's IP
+	//print device's IP to serial console
   	Serial.println(WiFi.localIP()); 
 	syslog.logf(LOG_INFO, "Got IP from DHCP");
 	//
 
-	//NTP
-	if(strcmp(ntpServer, "") != 0)
+	//connect to NTP server
+	if(strcmp(ntpServer, "") != 0)														//if the NTP server address was readed back correct..
 	{
 		Serial.printf("Trying to connect to NTP server '%s'\n", ntpServer);
 		syslog.logf(LOG_INFO, "Trying to connect to NTP server '%s'\n", ntpServer);
-		configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
+		configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);						//set system clock according to the NTP server
 	}
 	
-	else
+	else																				//else set the system time to 00:00
 	{
 		Serial.println("no valid NTP server address was loaded.");
 		syslog.log(LOG_ERR, "no valid NTP server address was loaded.");
@@ -1117,7 +1115,7 @@ void setup()
     	settimeofday(&now, NULL);	
 	}
 
-	printLocalTime();
+	printLocalTime();																	//print system time
 	//
 
   
@@ -1142,63 +1140,56 @@ void setup()
 	});
 
   
-	//start server
+	//start web server
   	server.begin();
-
-
-	//start Ticker
-	//time_schedule.start();
-
-
-
-
-	
-
 }
 
-void loop()
-{
-	//time_schedule.update();
 
-	if(clear_credentials_flag)
+
+//loop
+void loop()																				
+{
+	if(clear_credentials_flag)															//if amnesia was requested (refere heartbeat_task)..
 	{
 		Serial.printf("clear_credentials_flag = %d\n", clear_credentials_flag);
 
-		clearEEPROM();
-		clear_wifi_credentials();
-		clear_credentials_flag = false;
+		clearEEPROM();																	//clear EEPROM
+		clear_wifi_credentials();														//clear wifi credentials
+		clear_credentials_flag = false;													//clear amnesia pending flag
 	}
 
 }
 
 
 
-
+//clear EEPROM. Is called if amnesia button was held down for 3 heartbeat periodes.
 void clearEEPROM()
 {
-	char* buff = (char*)malloc(max_mem);
+	char* buff = (char*)malloc(max_mem);							//allocated memory to hold all the 0xFF for erase
 	for(int i=0; i<max_mem; i++)
-		buff[i] = 255;
+		buff[i] = 255;												//fill the whole buffer with 0xFF
 
-	EEPROM.begin(max_mem);
-	EEPROM.writeBytes(0, buff, max_mem);
-	EEPROM.end();
+	EEPROM.begin(max_mem);											//init EEPROM
+	EEPROM.writeBytes(0, buff, max_mem);							//write buffer to EEPROM -> erase
+	EEPROM.end();													//deinit EEPROM
 
-	free(buff);
+	free(buff);														//free buffer
 	Serial.println("EEPROM cleared!");
 	syslog.log("EEPROM cleared!");
 }
 
 
+//clear wifi credentials. Is called if amnesia button was held down for 3 heartbeat periodes.
+//TODO: check why "wifiManager.resetSettings()" does not work.
 void clear_wifi_credentials()
 {
 	syslog.log(LOG_WARNING, "clearing WIFI credentials!");
 
 	//reset saved settings
 	//wifiManager.resetSettings();
-	wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT(); //load the flash-saved configs
-	esp_wifi_init(&cfg); //initiate and allocate wifi resources (does not matter if connection fails)
-	delay(2000); //wait a bit
+	wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT(); 				//load the flash-saved configs
+	esp_wifi_init(&cfg); 												//initiate and allocate wifi resources (does not matter if connection fails)
+	delay(2000); 														//wait a bit
 
 	if(esp_wifi_restore()!=ESP_OK)
 	{
@@ -1212,46 +1203,48 @@ void clear_wifi_credentials()
 	//continue
 	delay(1000);
 
-	ESP.restart();
+	ESP.restart();														//resart the system
 }
 
 
+//get the rotion speed from the flow sensor in Hz * 0.5 via UART1.
 uint16_t get_pump_flow()
 {
-	Serial1.write('a');
-	Serial1.flush();
+	Serial1.write('a');													//request rotation speed from flow sensor									
+	Serial1.flush();													//force UART1 to send the command
 
-	int16_t ticks = -1;
+	int16_t ticks = -1;													//declare and define variable for rotation speed
 
 	do
 	{
-		ticks = Serial1.read();
+		ticks = Serial1.read();											//try to read back rotation speed from the flow sensor
 	}
-	while (ticks == -1);
+	while (ticks == -1);												//poll for rotation speed from the flow sensor
 
 	return (uint16_t) ticks;
 }
 
 
-//callback-functions
+//switches on the pump
 void pump_on()
 {	
-    Rel_switch(1, 1);
-    Rel_switch(2, 1);
+    Rel_switch(1, 1);													//switching on relais 1
+    Rel_switch(2, 1);													//switching on relais 2
 
 	Serial.println("Switching on pump!");
 	syslog.log(LOG_DEBUG, "Switching on pump!");
 
-	pump_state = true;
+	pump_state = true;													//setting pump state to on
 }
 
+//switches off the pump
 void pump_off()
 {
-    Rel_switch(1, 0);
-    Rel_switch(2, 0);
+    Rel_switch(1, 0);													//switching on relais 1
+    Rel_switch(2, 0);													//switching on relais 2
 
 	Serial.println("Switching off pump!");
 	syslog.log(LOG_DEBUG, "Switching off pump!");
 
-	pump_state = false;
+	pump_state = false;													//setting pump state to off
 }
