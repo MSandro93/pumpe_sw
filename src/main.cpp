@@ -40,9 +40,6 @@
 
 bool pump_state = false;
 
-FILE* logfile;
-char logfile_name[15];  //name of todays logfile
-
 AsyncWebServer server(80);
 DNSServer dns;
 
@@ -135,15 +132,6 @@ void firstTaskOfDay()
 
 	//reset total watering time();
 	scheduler_reset_real_watering_time_today();
-
-	//create new logfile for today
-	tm timeinfo;
-	getLocalTime(&timeinfo);
-
-	fclose(logfile);
-	sprintf(logfile_name, "%02d:%02d:%04d.log", timeinfo.tm_mday, timeinfo.tm_mon+1, (timeinfo.tm_year+1900));
-	fopen(logfile_name, "a");
-	//
 }
 
 
