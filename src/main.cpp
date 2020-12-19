@@ -60,7 +60,6 @@ struct timestamp
 };
 
 float threshold = -1.0f;
-//Ticker time_schedule(scheduler_loop, one_tick_in_mills, 0, MILLIS);
 //
 
 //everything for the weather forecaste
@@ -82,10 +81,11 @@ Syslog syslog(udpClient, SYSLOG_SERVER, SYSLOG_PORT, DEVICE_HOSTNAME, APP_NAME, 
 //
 
 
-void pump_on();
-void pump_off();
-
-
+//function is going to be executed every early morning. It:
+// - reactivates all appointments
+// - fetches weatherforecast for the current day.
+// - decides if watering periodes (appointments) have to be deactived, based on the forcased rain
+// - sets the total watering time of the day to zero (reset)
 void firstTaskOfDay()
 {
 	//set all appointments for today to pending
@@ -135,7 +135,7 @@ void firstTaskOfDay()
 }
 
 
-
+//returns if a 0 termianted string onsly consists of readalbe ascii symbols (letters, numbers and specials). This function is used to check the readback of presets from EEPROM.
 bool getValidString(uint8_t* str_, char* str_dest, int len_)
 {
 	int i = 0;
@@ -173,12 +173,13 @@ bool getValidString(uint8_t* str_, char* str_dest, int len_)
 }
 
 
+//checks if the given hour and minute is valid. h=[0-23]; m=[0-59]
 bool isValidTime(int h_, int m_)
 {
 	return ( (h_>-1) && (h_<24) && (m_>-1) && (m_<61) );
 }
 
-
+//prints the system time. Is only used once at system startup.
 void printLocalTime()
 {
   struct tm timeinfo;
@@ -194,6 +195,8 @@ void printLocalTime()
 }
 
 
+//returns total count of minutes from time in string format hh:mm. E.g.: 01:10 -> 70. Is to check if appointments are in the right order.
+//For example: It is not possible that the watering starts at 8:00 and ends at 7:00 at the same day.
 int getMinutesFromStr(char* str_)
 {
 	char* buff = (char*)malloc(20);
@@ -223,6 +226,8 @@ int getMinutesFromStr(char* str_)
 	}
 }
 
+
+//handles all incoming http-requests.
 void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total)
 {
 	char* body = (char*)malloc(100);
@@ -773,11 +778,17 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 
 
 
-int flag = 1;
-int cnt = 0;
-int cnt2 = 0;
-bool was_disconnected = false;
+int cnt = 0;		//is used for amnesia. The amnesia button has to be hold down for 3 seounds in a row to trigger amnesia. In this case all presets and the wifi credentials get deleted. This variable is incremanted every secound in the heartbeat task, if the button is hold down.
+int cnt2 = 0;		//gives the wifi 10 secounds time for a reconnect in case of lost connection. Every secound the heartbeat task cehcks the wifi state. If it is disconnected a reconnection attempt is triggered. The "was_disconnected"-flag is used to signal a running reconnection attempt. "cnt2" is incremented every time the heartbeat task sees a running reconnection attempt (was_disconnected==true). If there is no connection after 10 secounds (cnt2 == 10), a new reconnection attempt is triggered and "cnt2" is resettet.
+bool was_disconnected = false;	//inicates a running reconnection attempt to the heartbeat task
 
+//heart beat task. Runns at a periode of 1s. Every seound it does:
+// - toggle heartbeat LED
+// - let the scheudler check if it is time for an appointment to execute
+// - checking the state of the amnesia button and erase presets and wifi credentials if it was pressed for 3 periodes in a row.
+// - update the wifi state led, according to the state of the wifi connection
+// - triggers a reconnection of the wifi in case of lsot connection. If the conenction could not be established after 10 periodes, a new attempt is gonna to be triggered.
+// - restarts MDNS server if a reconnection of wifi was successfull.
 void heartbeat_task(void *pvParameters)
 {
 	TickType_t xLastWakeTime;
@@ -842,7 +853,7 @@ void heartbeat_task(void *pvParameters)
 
 
 
-
+//entry point after reset
 void setup()
 {
 	//init GPIOs

@@ -3,6 +3,9 @@
         "cstdint": "cpp",
         "functional": "cpp",
         "bitset": "cpp",
-        "random": "cpp"
+        "random": "cpp",
+        "istream": "cpp",
+        "ostream": "cpp",
+        "regex": "cpp"
     }
 }
