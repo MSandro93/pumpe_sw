@@ -979,11 +979,11 @@ void setup()
 	scheduler_addAppointment(00, 01, &firstTaskOfDay, "erste_aufgabe_des_tages");	//add appointment for the first task of the day,
 
 	sort_appointments();															//sort appointments by timestamp
-	//
+	// 
  
 
 
-	//load API-Key for openweathermaps
+	//load API-Key for openweathermaps 
 	Serial.print("loading API key...  ");
 	EEPROM.readBytes(apiKey_add, buff,  API_KEY_LENGTH + 1);  	//load the API key from the EEPROM. +1 to get the termianting zero
 

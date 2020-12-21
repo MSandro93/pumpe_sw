@@ -26,9 +26,9 @@
      borderopacity="1.0"
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
-     inkscape:zoom="1.979899"
-     inkscape:cx="82.224989"
-     inkscape:cy="112.97239"
+     inkscape:zoom="3.959798"
+     inkscape:cx="67.764942"
+     inkscape:cy="83.660483"
      inkscape:document-units="mm"
      inkscape:current-layer="layer1"
      inkscape:document-rotation="0"
@@ -50,7 +50,7 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title></dc:title>
+        <dc:title />
       </cc:Work>
     </rdf:RDF>
   </metadata>
@@ -200,44 +200,48 @@
        style="fill:#ffffff;stroke:#000000;stroke-width:0.141932;stroke-miterlimit:4;stroke-dasharray:none"
        id="path62-8-2"
        cx="28.711157"
-       cy="16.436514"
+       cy="-16.436514"
        r="4.8901205"
        inkscape:export-xdpi="160"
-       inkscape:export-ydpi="160" />
+       inkscape:export-ydpi="160"
+       transform="scale(1,-1)" />
     <circle
        style="fill:#ffffff;stroke:#000000;stroke-width:0.141932;stroke-miterlimit:4;stroke-dasharray:none"
        id="path62-9-9-1"
        cx="28.711157"
-       cy="16.479565"
+       cy="-16.393463"
        r="4.0280609"
        inkscape:export-xdpi="160"
-       inkscape:export-ydpi="160" />
+       inkscape:export-ydpi="160"
+       transform="scale(1,-1)" />
     <path
        style="fill:none;stroke:#000000;stroke-width:0.141932;stroke-miterlimit:4;stroke-dasharray:none"
        id="path919-4-9"
        sodipodi:type="arc"
-       sodipodi:cx="28.711157"
-       sodipodi:cy="12.564006"
+       sodipodi:cx="-28.711157"
+       sodipodi:cy="12.418727"
        sodipodi:rx="0.89461493"
        sodipodi:ry="0.89461493"
        sodipodi:start="0"
        sodipodi:end="3.1415927"
        sodipodi:open="true"
        sodipodi:arc-type="arc"
-       d="m 29.605772,12.564006 a 0.89461493,0.89461493 0 0 1 -0.447308,0.774759 0.89461493,0.89461493 0 0 1 -0.894615,0 0.89461493,0.89461493 0 0 1 -0.447307,-0.774759"
+       d="m -27.816542,12.418727 a 0.89461493,0.89461493 0 0 1 -0.447307,0.774759 0.89461493,0.89461493 0 0 1 -0.894615,0 0.89461493,0.89461493 0 0 1 -0.447308,-0.774759"
        inkscape:export-xdpi="160"
-       inkscape:export-ydpi="160" />
+       inkscape:export-ydpi="160"
+       transform="scale(-1,1)" />
     <circle
        style="fill:none;stroke:#000000;stroke-width:0.141932;stroke-miterlimit:4;stroke-dasharray:none"
        id="path927-4-6"
        cx="28.711159"
-       cy="14.917479"
+       cy="-17.955549"
        r="0.51886457"
        inkscape:export-xdpi="160"
-       inkscape:export-ydpi="160" />
+       inkscape:export-ydpi="160"
+       transform="scale(1,-1)" />
     <g
        id="g964-4-8"
-       transform="matrix(1.7020083,0,0,1.7020083,-95.631541,-18.348752)"
+       transform="matrix(1.7020083,0,0,-1.7020083,-95.631541,51.22178)"
        style="stroke-width:0.0833908;stroke-miterlimit:4;stroke-dasharray:none"
        inkscape:export-xdpi="160"
        inkscape:export-ydpi="160">
@@ -258,13 +262,14 @@
        style="fill:none;stroke:#000000;stroke-width:0.239411;stroke-miterlimit:4;stroke-dasharray:none"
        id="path1467"
        cx="28.711157"
-       cy="16.436514"
+       cy="-16.436514"
        r="7.9529715"
        inkscape:export-xdpi="160"
-       inkscape:export-ydpi="160" />
+       inkscape:export-ydpi="160"
+       transform="scale(1,-1)" />
     <g
        id="g1599"
-       transform="matrix(0.80643054,0,0,0.80643054,8.3970497,5.9992096)"
+       transform="matrix(0.80643054,0,0,-0.80643054,8.3970497,26.873818)"
        inkscape:export-xdpi="160"
        inkscape:export-ydpi="160">
       <g
