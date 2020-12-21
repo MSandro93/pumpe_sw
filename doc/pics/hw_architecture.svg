@@ -23,9 +23,9 @@
      borderopacity="1.0"
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
-     inkscape:zoom="1.4142136"
-     inkscape:cx="369.46585"
-     inkscape:cy="221.49672"
+     inkscape:zoom="2"
+     inkscape:cx="249.75248"
+     inkscape:cy="205.09898"
      inkscape:document-units="mm"
      inkscape:current-layer="layer1"
      inkscape:document-rotation="0"
@@ -411,14 +411,14 @@
     <text
        xml:space="preserve"
        style="font-style:normal;font-weight:normal;font-size:2.11667px;line-height:1.25;font-family:sans-serif;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264583"
-       x="112.0432"
+       x="113.49271"
        y="39.801979"
        id="text2900-6-4"><tspan
          sodipodi:role="line"
          id="tspan2898-0-5"
-         x="112.0432"
+         x="113.49271"
          y="39.801979"
-         style="font-size:2.11667px;stroke-width:0.264583">115200, 8, n</tspan></text>
+         style="font-size:2.11667px;stroke-width:0.264583">4800, 8, n</tspan></text>
     <text
        xml:space="preserve"
        style="font-style:normal;font-weight:normal;font-size:2.82223px;line-height:1.25;font-family:sans-serif;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264583"
