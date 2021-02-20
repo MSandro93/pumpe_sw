@@ -748,12 +748,12 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 		char* buff = (char*) malloc(100);
 
 		uint8_t pump_state = get_pump_state();
-		int16_t flow = get_pump_flow();
+		float flow = get_pump_flow() *  0.190f;
 		struct tm timeinfo;
 
 		getLocalTime(&timeinfo);  //==0 -> fehler
 
-		sprintf(buff, "%02d:%02d:%02d  %02d.%02d.%04d;%d;%d", timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec, timeinfo.tm_mday, timeinfo.tm_mon, (timeinfo.tm_year + 1900), pump_state, flow);
+		sprintf(buff, "%02d:%02d:%02d  %02d.%02d.%04d;%d;%.3f", timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec, timeinfo.tm_mday, timeinfo.tm_mon, (timeinfo.tm_year + 1900), pump_state, flow);
 		request->send(200, "text/plain", buff);
 
 		free(buff);
