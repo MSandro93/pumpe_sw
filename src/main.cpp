@@ -14,7 +14,6 @@
 #include "freertos/task.h"
 #include "esp_task_wdt.h"
 
-
 //custom
 #include "gpios.h"
 #include "main.h"
@@ -1013,7 +1012,7 @@ void setup()
 	Serial.print("loading city for weatherforecast...  ");
 	EEPROM.readBytes(city_add, buff, 20);						//reading city for weatherforecast from EEPROM
 
-	if(getValidString(buff, city, 20))							//check if a valid city name was readed from EEPROM ..
+	if(getValidString(buff, city, strlen((char*) buff)))		//check if a valid city name was readed from EEPROM ..
 	{
 		Serial.print("ok\n");
 	}
