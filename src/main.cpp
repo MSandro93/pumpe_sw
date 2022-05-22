@@ -77,6 +77,10 @@ WiFiUDP udpClient;
 Syslog syslog(udpClient, SYSLOG_SERVER, SYSLOG_PORT, DEVICE_HOSTNAME, APP_NAME, LOG_KERN);
 //
 
+void midnight_task()
+{
+	scheduler_setPendingToday("erste_aufgabe_des_tages", true);
+}
 
 //function is going to be executed every early morning. It:
 // - reactivates all appointments
@@ -87,6 +91,9 @@ void firstTaskOfDay()
 {
 	//set all appointments for today to pending
 	scheduler_setAllToPendingToday();
+
+	//exept of itself
+	scheduler_setPendingToday("erste_aufgabe_des_tages", false);
 
 	//get weatherforecast of today and deactivate watering-periodes, if nessaccary
     float rain = getRainVolumeToday(api_key, city, &syslog);
@@ -974,7 +981,9 @@ void setup()
 		ts.minuten = -1;
 		ts.stunden = -1;
 	}
-	
+
+	scheduler_addAppointment(00, 00, &midnight_task, "midnight_task");
+
 	scheduler_addAppointment(00, 01, &firstTaskOfDay, "erste_aufgabe_des_tages");	//add appointment for the first task of the day,
 
 	sort_appointments();															//sort appointments by timestamp
