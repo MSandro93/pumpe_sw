@@ -85,6 +85,8 @@
         <button name="reboot" type="button">Neustart</button>
         <button name="test1" type="button">test1</button>
         <button name="test2" type="button">test2</button>
+        <span name="lable1">Build: </span>
+        <span name="build"> </span>
       </fieldset>
     </form>
 
@@ -306,6 +308,7 @@
         form.querySelector('input[name="threshold_input"]').value = threshold;
         form.querySelector('input[name="morning_check_box"]').checked = morning_bool;
         form.querySelector('input[name="evening_check_box"]').checked = evening_bool;
+        form.querySelector('span[name="build"]').innerHTML = build;
 
         /*get current time schedule*/
         const response_sched = await getData("getScheudule");

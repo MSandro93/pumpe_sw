@@ -1,0 +1,1 @@
+char git_hash[] = "f6d5e4a4004c50fc70f0b215e9ef1806ea1abef5";

@@ -34,6 +34,7 @@
 #define th_add		200 //4
 //
 
+extern char git_hash[];
 
 bool pump_state = false;
 
@@ -315,7 +316,7 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 		int morgens_aktiv = scheudler_getActive("morgens_an") & scheudler_getActive("morgens_aus");
 		int abends_aktiv  = scheudler_getActive( "abends_an") & scheudler_getActive("abends_aus");
 					
-  		sprintf(buff, "%02d:%02d:%02d  %02d.%02d.%04d;%s;%s;%s;%s;%d;%d", timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec, timeinfo.tm_mday, timeinfo.tm_mon, (timeinfo.tm_year + 1900), ntpServer, api_key_buff, city, threshold_buff, morgens_aktiv, abends_aktiv);
+  		sprintf(buff, "%02d:%02d:%02d  %02d.%02d.%04d;%s;%s;%s;%s;%d;%d;%s", timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec, timeinfo.tm_mday, timeinfo.tm_mon, (timeinfo.tm_year + 1900), ntpServer, api_key_buff, city, threshold_buff, morgens_aktiv, abends_aktiv, git_hash);
 
 		request->send(200, "text/plain", buff); 
 
