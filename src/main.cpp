@@ -34,6 +34,10 @@
 #define th_add		200 //4
 //
 
+float water_delivered = 0.0f;
+
+float water_flow = 0.0f;
+
 extern char git_hash[];
 
 bool pump_state = false;
@@ -755,12 +759,12 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 		char* buff = (char*) malloc(100);
 
 		uint8_t pump_state = get_pump_state();
-		float flow = get_pump_flow() *  0.190f;
+		water_flow = get_pump_flow() *  0.190f;
 		struct tm timeinfo;
 
 		getLocalTime(&timeinfo);  //==0 -> fehler
 
-		sprintf(buff, "%02d:%02d:%02d  %02d.%02d.%04d;%d;%.3f", timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec, timeinfo.tm_mday, timeinfo.tm_mon, (timeinfo.tm_year + 1900), pump_state, flow);
+		sprintf(buff, "%02d:%02d:%02d  %02d.%02d.%04d;%d;%.3f", timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec, timeinfo.tm_mday, timeinfo.tm_mon, (timeinfo.tm_year + 1900), pump_state, water_flow);
 		request->send(200, "text/plain", buff);
 
 		free(buff);
@@ -849,6 +853,11 @@ void heartbeat_task(void *pvParameters)
 			MDNS.end();
 			MDNS.begin("pumpe");
 			was_disconnected = false;
+		}
+
+		if(pump_state == true)
+		{
+			water_delivered += water_flow/60.0f;
 		}
     }
 }
@@ -1252,8 +1261,13 @@ void pump_off()
     Rel_switch(1, 0);													//switching on relais 1
     Rel_switch(2, 0);													//switching on relais 2
 
-	Serial.println("Switching off pump!");
-	syslog.log(LOG_DEBUG, "Switching off pump!");
-
 	pump_state = false;													//setting pump state to off
+
+	char buff_[100];
+	sprintf(buff_, "Switching off pump! (%.2f liter water delivered)", water_delivered);
+
+	water_delivered = 0.0f;
+
+	Serial.println(buff_);
+	syslog.log(LOG_DEBUG, "buff_");
 }
