@@ -759,7 +759,6 @@ void handleRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, si
 		char* buff = (char*) malloc(100);
 
 		uint8_t pump_state = get_pump_state();
-		water_flow = get_pump_flow() *  0.190f;
 		struct tm timeinfo;
 
 		getLocalTime(&timeinfo);  //==0 -> fehler
@@ -854,6 +853,8 @@ void heartbeat_task(void *pvParameters)
 			MDNS.begin("pumpe");
 			was_disconnected = false;
 		}
+
+		water_flow = get_pump_flow() *  0.190f;  //update current water flow
 
 		if(pump_state == true)
 		{
