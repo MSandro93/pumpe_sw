@@ -1,0 +1,4 @@
+- make sure "debug_speed = 1000" is in paltformio.ini
+- use Zadig-Tool (https://zadig.akeo.ie/) to inject windows driver (WinUSB (v.xxxx)) to Dual RS232-HS (Interface 0)
+- connect jtag to the 2x20 expansion header
+- set break points before hitting "Start Debugging"

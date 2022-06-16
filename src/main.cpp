@@ -1265,10 +1265,12 @@ void pump_off()
 	pump_state = false;													//setting pump state to off
 
 	char buff_[100];
+
 	sprintf(buff_, "Switching off pump! (%.2f liter water delivered)", water_delivered);
 
 	water_delivered = 0.0f;
 
 	Serial.println(buff_);
-	syslog.log(LOG_DEBUG, "buff_");
+
+	syslog.log(LOG_DEBUG, buff_);
 }
